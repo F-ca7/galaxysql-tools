@@ -22,13 +22,21 @@ import java.util.List;
 public class DdlImportWorker implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(DdlExportWorker.class);
-    private final List<String> filepaths;
-    private final DataSource druid;
+    private final List<String> filepaths = new ArrayList<>();;
+    private final DataSource dataSource;
 
-    public DdlImportWorker(List<String> dbOrTbNames, DataSource druid) {
-        this.druid = druid;
-        this.filepaths = new ArrayList<>();
-        for (String name : dbOrTbNames) {
+    public DdlImportWorker(String filename, DataSource dataSource) {
+        this.dataSource = dataSource;
+        File file = new File(filename);
+        if (!file.exists() || !file.isFile()) {
+            throw new IllegalStateException("File " + filename + " does not exist");
+        }
+        this.filepaths.add(file.getAbsolutePath());
+    }
+
+    public DdlImportWorker(List<String> tableNames, DataSource dataSource) {
+        this.dataSource = dataSource;
+        for (String name : tableNames) {
             String filename = name + ConfigConstant.DDL_FILE_SUFFIX;
             File file = new File(filename);
             if (!file.exists() || !file.isFile()) {
@@ -41,7 +49,7 @@ public class DdlImportWorker implements Runnable {
     @Override
     public void run() {
         BufferedReader reader = null;
-        try (Connection conn = druid.getConnection();
+        try (Connection conn = dataSource.getConnection();
             Statement stmt = conn.createStatement()) {
 
             StringBuilder sqlStringBuilder = new StringBuilder(100);

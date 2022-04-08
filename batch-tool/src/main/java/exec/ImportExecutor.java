@@ -21,6 +21,7 @@ import cmd.ImportCommand;
 import com.alibaba.druid.pool.DruidDataSource;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
+import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.QuoteEncloseMode;
 import org.slf4j.Logger;
@@ -70,6 +71,9 @@ public class ImportExecutor extends WriteDbExecutor {
     }
 
     private void checkDbNotExist(String dbName) {
+        if (ConfigConstant.DEFAULT_SCHEMA_NAME.equalsIgnoreCase(dbName)) {
+            return;
+        }
         try (Connection conn = dataSource.getConnection()) {
             if (DbUtil.checkDatabaseExists(conn, dbName)) {
                throw new RuntimeException(String.format("Database [%s] already exists, cannot import with ddl",
@@ -97,7 +101,6 @@ public class ImportExecutor extends WriteDbExecutor {
 
     @Override
     public void execute() {
-        configureFieldMetaInfo();
         switch (producerExecutionContext.getDdlMode()) {
         case WITH_DDL:
             handleDDL();
@@ -111,7 +114,7 @@ public class ImportExecutor extends WriteDbExecutor {
             throw new UnsupportedOperationException("DDL mode is not supported: " +
                 producerExecutionContext.getDdlMode());
         }
-
+        configureFieldMetaInfo();
         // 决定是否要分片
         if (command.isShardingEnabled()) {
             doShardingImport();
@@ -126,8 +129,15 @@ public class ImportExecutor extends WriteDbExecutor {
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImportWorker ddlImportWorker = new DdlImportWorker(command.isDbOperation() ?
-                Collections.singletonList(command.getDbName()) : command.getTableNames(), dataSource);
+        DdlImportWorker ddlImportWorker;
+        if (command.isDbOperation()) {
+            if (producerExecutionContext.getFilePathList().size() != 1) {
+                throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
+            }
+            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFilePathList().get(0), dataSource);
+        } else {
+            ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
+        }
 
         Thread ddlThread = new Thread(ddlImportWorker);
         ddlThread.start();

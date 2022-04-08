@@ -142,7 +142,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
             consumers[i] = new ExportConsumer(filePaths[i], emittedDataCounter,
                 config.isWithHeader(),
                 config.getSeparator().getBytes(),
-                tableFieldMetaInfo, config.getCompressMode());
+                tableFieldMetaInfo, config.getCompressMode(), config.getCharset());
         }
         WorkerPool<ExportEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
         workerPool.start(executor);

@@ -23,6 +23,7 @@ import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
 
+import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExportConsumer implements WorkHandler<ExportEvent> {
@@ -35,12 +36,12 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
     public ExportConsumer(String filename, AtomicInteger emittedDataCounter,
                           boolean isWithHeader, byte[] separator,
                           TableFieldMetaInfo tableFieldMetaInfo,
-                          CompressMode compressMode) {
+                          CompressMode compressMode, Charset charset) {
         this.isWithHeader = isWithHeader;
         this.emittedDataCounter = emittedDataCounter;
         this.separator = separator;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
-        this.fileWriter = new NioFileWriter(filename, compressMode);
+        this.fileWriter = new NioFileWriter(filename, compressMode, charset);
         if (isWithHeader) {
             appendHeader();
         }

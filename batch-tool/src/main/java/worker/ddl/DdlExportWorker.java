@@ -12,8 +12,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static model.config.ConfigConstant.DDL_FILE_SUFFIX;
 
@@ -30,6 +31,8 @@ public class DdlExportWorker implements Runnable {
      * 是否导出整个数据库与其中的所有表
      */
     private final boolean isExportWholeDb;
+
+    private static final Pattern DB_MODE_PATTERN = Pattern.compile("/\\* MODE = '(.*)' \\*/$");
 
     public DdlExportWorker(DataSource druid, String dbName) {
         this.druid = druid;
@@ -67,7 +70,7 @@ public class DdlExportWorker implements Runnable {
     private void exportDdl() throws Throwable {
         try (Connection conn = druid.getConnection()) {
             if (isExportWholeDb) {
-                logger.info("库：{} 开始导出库表结构", dbName);
+                logger.info("库：{} 开始导出库结构", dbName);
                 exportDatabaseStructure(conn, dbName);
             }
             for (String tableName : tableNames) {
@@ -79,6 +82,11 @@ public class DdlExportWorker implements Runnable {
     private void exportDatabaseStructure(Connection conn, String dbName) throws IOException, DatabaseException {
         writeCommentForDatabase(dbName);
         String dbDdl = DbUtil.getShowCreateDatabase(conn, dbName);
+        Matcher matcher = DB_MODE_PATTERN.matcher(dbDdl);
+        if (matcher.find()) {
+            String mode = matcher.group(1);
+            dbDdl = String.format("%s mode = '%s'", dbDdl, mode);
+        }
         writeLine(dbDdl + ";");
         writeLine("");
         writeLine(String.format("use %s;", dbName));

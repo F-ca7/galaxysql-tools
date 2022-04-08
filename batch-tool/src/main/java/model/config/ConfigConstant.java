@@ -127,6 +127,8 @@ public class ConfigConstant {
      */
     public static final float FLOAT_UPDATE_MULTIPLICAND = 2.0f;
 
+    public static final String DEFAULT_SCHEMA_NAME = "polardbx";
+
     public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     public static final CompressMode DEFAULT_COMPRESS_MODE = CompressMode.NONE;

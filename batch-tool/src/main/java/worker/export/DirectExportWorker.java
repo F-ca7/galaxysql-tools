@@ -34,6 +34,7 @@ import worker.util.ExportUtil;
 import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -85,9 +86,10 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
+                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode,
+                              Charset charset) {
         this(druid, topology,  tableFieldMetaInfo, 0,
-            filename, separator, isWithHeader, quoteEncloseMode, compressMode);
+            filename, separator, isWithHeader, quoteEncloseMode, compressMode, charset);
     }
 
     /**
@@ -99,7 +101,8 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode) {
+                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode,
+                              Charset charset) {
         super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode);
         this.maxLine = maxLine;
         this.filename = filename;
@@ -113,7 +116,7 @@ public class DirectExportWorker extends BaseExportWorker {
         } else {
             this.curFileSeq = NO_FILE_SEQ;
         }
-        this.fileWriter = new NioFileWriter(compressMode);
+        this.fileWriter = new NioFileWriter(compressMode, charset);
         createNewFile();
     }
 
