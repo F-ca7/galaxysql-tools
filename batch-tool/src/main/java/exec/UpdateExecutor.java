@@ -81,7 +81,7 @@ public class UpdateExecutor extends WriteDbExecutor {
             String toUpdateColumns = UpdateUtil.formatToReplaceColumns(consumerExecutionContext.getTableFieldMetaInfo(tableName));
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
             configureCommonContextAndRun(ShardedReplaceConsumer.class, producerExecutionContext,
-                consumerExecutionContext);
+                consumerExecutionContext, tableName);
         }
     }
 
@@ -97,10 +97,10 @@ public class UpdateExecutor extends WriteDbExecutor {
 
             if (consumerExecutionContext.isWhereInEnabled()) {
                 configureCommonContextAndRun(UpdateWithFuncInConsumer.class, producerExecutionContext,
-                    consumerExecutionContext);
+                    consumerExecutionContext, tableName);
             } else {
                 configureCommonContextAndRun(UpdateWithFuncConsumer.class, producerExecutionContext,
-                    consumerExecutionContext);
+                    consumerExecutionContext, tableName);
             }
         }
     }
@@ -116,7 +116,7 @@ public class UpdateExecutor extends WriteDbExecutor {
             consumerExecutionContext.setToUpdateColumns(toUpdateColumns);
 
             configureCommonContextAndRun(clazz, producerExecutionContext,
-                consumerExecutionContext);
+                consumerExecutionContext, tableName);
         }
     }
 }

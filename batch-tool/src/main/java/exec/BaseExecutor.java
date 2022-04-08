@@ -121,8 +121,9 @@ public abstract class BaseExecutor {
 
     protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
                                                 ProducerExecutionContext producerExecutionContext,
-                                                ConsumerExecutionContext consumerExecutionContext) {
-        configureCommonContextAndRun(clazz, producerExecutionContext, consumerExecutionContext, true);
+                                                ConsumerExecutionContext consumerExecutionContext,
+                                                String tableName) {
+        configureCommonContextAndRun(clazz, producerExecutionContext, consumerExecutionContext, tableName, true);
     }
 
     /**
@@ -132,6 +133,7 @@ public abstract class BaseExecutor {
     protected void configureCommonContextAndRun(Class<? extends BaseWorkHandler> clazz,
                                                 ProducerExecutionContext producerExecutionContext,
                                                 ConsumerExecutionContext consumerExecutionContext,
+                                                String tableName,
                                                 boolean usingBlockReader) {
         ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-producer",
             producerExecutionContext.getParallelism());
@@ -177,6 +179,7 @@ public abstract class BaseExecutor {
                 consumers[i] = clazz.newInstance();
                 consumers[i].setConsumerContext(consumerExecutionContext);
                 consumers[i].createTpsLimiter(consumerExecutionContext.getBatchTpsLimitPerConsumer());
+                consumers[i].setTableName(tableName);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -191,9 +194,9 @@ public abstract class BaseExecutor {
 
         ReadFileProducer producer;
         if (usingBlockReader) {
-            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer);
+            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, tableName);
         } else {
-            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer);
+            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, tableName);
         }
 
         try {

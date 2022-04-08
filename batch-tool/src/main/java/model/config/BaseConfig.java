@@ -101,7 +101,7 @@ public class BaseConfig {
     }
 
     public void setCompressMode(CompressMode compressMode) {
-        if (this.encryptionConfig.getEncryptionMode() != EncryptionMode.NONE) {
+        if (this.encryptionConfig.getEncryptionMode() != EncryptionMode.NONE && compressMode != CompressMode.NONE) {
             throw new UnsupportedOperationException("Do not support compression with encryption");
         }
         this.compressMode = compressMode;
@@ -112,7 +112,7 @@ public class BaseConfig {
     }
 
     public void setEncryptionConfig(EncryptionConfig encryptionConfig) {
-        if (this.compressMode != CompressMode.NONE) {
+        if (this.compressMode != CompressMode.NONE && encryptionConfig.getEncryptionMode() != EncryptionMode.NONE) {
             throw new UnsupportedOperationException("Do not support encryption with compression");
         }
         this.encryptionConfig = encryptionConfig;

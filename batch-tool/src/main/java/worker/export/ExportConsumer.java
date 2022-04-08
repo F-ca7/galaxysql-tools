@@ -19,6 +19,7 @@ package worker.export;
 import com.lmax.disruptor.WorkHandler;
 import model.config.CompressMode;
 import model.db.TableFieldMetaInfo;
+import model.encrypt.Cipher;
 import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
@@ -32,6 +33,8 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
     private final TableFieldMetaInfo tableFieldMetaInfo;
     private final IFileWriter fileWriter;
     private final AtomicInteger emittedDataCounter;
+
+    private Cipher cipher = null;
 
     public ExportConsumer(String filename, AtomicInteger emittedDataCounter,
                           boolean isWithHeader, byte[] separator,
@@ -58,11 +61,23 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
     }
 
     public void writeEvent(byte[] data) {
+        if (cipher != null) {
+            try {
+                data = cipher.encrypt(data);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
         try {
             fileWriter.write(data);
         } finally {
             emittedDataCounter.getAndDecrement();
         }
+    }
+
+    public void setCipher(Cipher cipher) {
+        this.cipher = cipher;
     }
 
     public void close() {

@@ -55,6 +55,10 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
         }
     }
 
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
     @Override
     public void onEvent(BatchLineEvent event) {
         // 保守起见，使用阻塞锁，不自旋

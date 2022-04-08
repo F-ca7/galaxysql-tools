@@ -26,6 +26,7 @@ import exception.DatabaseException;
 import model.CyclicAtomicInteger;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
+import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
@@ -143,6 +144,7 @@ public class ShardingExportExecutor extends BaseExportExecutor {
                 config.isWithHeader(),
                 config.getSeparator().getBytes(),
                 tableFieldMetaInfo, config.getCompressMode(), config.getCharset());
+            consumers[i].setCipher(Cipher.getCipher(config.getEncryptionConfig(), true));
         }
         WorkerPool<ExportEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
         workerPool.start(executor);

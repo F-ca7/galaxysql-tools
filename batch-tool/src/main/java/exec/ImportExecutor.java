@@ -34,7 +34,6 @@ import worker.insert.ShardedImportConsumer;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 
 public class ImportExecutor extends WriteDbExecutor {
@@ -115,14 +114,14 @@ public class ImportExecutor extends WriteDbExecutor {
                 producerExecutionContext.getDdlMode());
         }
         configureFieldMetaInfo();
-        // 决定是否要分片
-        if (command.isShardingEnabled()) {
-            doShardingImport();
-        } else {
-            doDefaultImport();
+        for (String tableName : tableNames) {
+            if (command.isShardingEnabled()) {
+                doShardingImport(tableName);
+            } else {
+                doDefaultImport(tableName);
+            }
+            logger.info("导入数据到 {} 完成", tableName);
         }
-
-        logger.info("导入数据到 {} 完成", tableNames);
     }
 
     /**
@@ -148,24 +147,24 @@ public class ImportExecutor extends WriteDbExecutor {
         }
     }
 
-    private void doDefaultImport() {
+    private void doDefaultImport(String tableName) {
         if (consumerExecutionContext.isReadProcessFileOnly()) {
             // 测试读取文件的性能
             configureCommonContextAndRun(ProcessOnlyImportConsumer.class,
-                producerExecutionContext, consumerExecutionContext);
+                producerExecutionContext, consumerExecutionContext, tableName);
         } else {
             configureCommonContextAndRun(ImportConsumer.class,
-                producerExecutionContext, consumerExecutionContext,
+                producerExecutionContext, consumerExecutionContext, tableName,
                 producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
         }
     }
 
-    private void doShardingImport() {
+    private void doShardingImport(String tableName) {
         configurePartitionKey();
         configureTopology();
 
         configureCommonContextAndRun(ShardedImportConsumer.class,
-            producerExecutionContext, consumerExecutionContext,
+            producerExecutionContext, consumerExecutionContext, tableName,
             producerExecutionContext.getQuoteEncloseMode() != QuoteEncloseMode.FORCE);
     }
 }
