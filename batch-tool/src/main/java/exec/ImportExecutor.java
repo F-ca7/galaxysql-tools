@@ -33,6 +33,8 @@ import worker.insert.ShardedImportConsumer;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
+import java.util.List;
 
 public class ImportExecutor extends WriteDbExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ImportExecutor.class);
@@ -56,13 +58,13 @@ public class ImportExecutor extends WriteDbExecutor {
             if (command.isDbOperation()) {
                 checkDbNotExist(command.getDbName());
             } else {
-                checkTableNotExist(command.getTableName());
+                checkTableNotExist(command.getTableNames());
             }
         } else {
             if (command.isDbOperation()) {
                 throw new UnsupportedOperationException("Don't support import database now");
             } else {
-                checkTableExists(command.getTableName());
+                checkTableExists(command.getTableNames());
             }
         }
     }
@@ -79,15 +81,17 @@ public class ImportExecutor extends WriteDbExecutor {
         }
     }
 
-    private void checkTableNotExist(String tableName) {
-        try (Connection conn = dataSource.getConnection()) {
-            if (DbUtil.checkTableExists(conn, tableName)) {
-                throw new RuntimeException(String.format("Table [%s] already exists, cannot import with ddl",
-                    tableName));
+    private void checkTableNotExist(List<String> tableNames) {
+        for (String tableName : tableNames) {
+            try (Connection conn = dataSource.getConnection()) {
+                if (DbUtil.checkTableExists(conn, tableName)) {
+                    throw new RuntimeException(String.format("Table [%s] already exists, cannot import with ddl",
+                        tableNames));
+                }
+            } catch (SQLException | DatabaseException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e.getMessage());
             }
-        } catch (SQLException | DatabaseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -115,15 +119,15 @@ public class ImportExecutor extends WriteDbExecutor {
             doDefaultImport();
         }
 
-        logger.info("导入数据到 {} 完成", tableName);
+        logger.info("导入数据到 {} 完成", tableNames);
     }
 
     /**
      * 同步导入建库建表语句
      */
     private void handleDDL() {
-        DdlImportWorker ddlImportWorker = new DdlImportWorker(
-            command.isDbOperation() ? command.getDbName() : command.getTableName(), dataSource);
+        DdlImportWorker ddlImportWorker = new DdlImportWorker(command.isDbOperation() ?
+                Collections.singletonList(command.getDbName()) : command.getTableNames(), dataSource);
 
         Thread ddlThread = new Thread(ddlImportWorker);
         ddlThread.start();

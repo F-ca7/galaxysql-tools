@@ -336,6 +336,10 @@ public class FileUtil {
         return false;
     }
 
+    public static String getFilePathPrefix(String path, String filenamePrefix, String tableName) {
+        return String.format("%s%s%s_", path, filenamePrefix, tableName);
+    }
+
     public static Map<String, List<File>> getDataFile(String baseDirectory) {
         File dir = new File(baseDirectory);
         if (!dir.isDirectory()) {

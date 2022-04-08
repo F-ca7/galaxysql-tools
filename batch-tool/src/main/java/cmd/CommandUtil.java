@@ -16,6 +16,7 @@
 
 package cmd;
 
+import com.google.common.collect.Lists;
 import datasource.DataSourceConfig;
 import datasource.DatasourceConstant;
 import model.ConsumerExecutionContext;
@@ -35,7 +36,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.FileUtil;
@@ -195,7 +196,7 @@ public class CommandUtil {
         default:
             throw new IllegalArgumentException("Unsupported command: " + commandTypeStr);
         }
-        command.setTableName(getTableName(result));
+        command.setTableNames(getTableNames(result));
         return command;
     }
 
@@ -207,7 +208,7 @@ public class CommandUtil {
     }
 
     private static ExportCommand parseExportCommand(CommandLine result) {
-        String tableName = result.getOptionValue(ARG_SHORT_TABLE);
+        List<String> tableNames = getTableNames(result);
         ExportConfig exportConfig = new ExportConfig();
         setCharset(result, exportConfig);
         setFirstLineColumn(result, exportConfig);
@@ -222,7 +223,16 @@ public class CommandUtil {
         setOrderBy(result, exportConfig);
         setQuoteEncloseMode(result, exportConfig);
         setParallelism(result, exportConfig);
-        return new ExportCommand(getDbName(result), tableName, exportConfig);
+        return new ExportCommand(getDbName(result), tableNames, exportConfig);
+    }
+
+    private static List<String> getTableNames(CommandLine result) {
+        if (!result.hasOption(ARG_SHORT_TABLE)) {
+            return null;
+        }
+        String tableNameStr = result.getOptionValue(ARG_SHORT_TABLE);
+        return Lists.newArrayList(
+            StringUtils.split(tableNameStr, ConfigConstant.CMD_SEPARATOR));
     }
 
     private static BaseOperateCommand parseImportCommand(CommandLine result) {
@@ -272,7 +282,7 @@ public class CommandUtil {
             exportConfig
                 .setAscending(!ConfigConstant.ORDER_BY_TYPE_DESC.equals(result.getOptionValue(ARG_SHORT_ORDER)));
             List<String> columnNameList = Arrays.asList(StringUtils.split(result.getOptionValue(ARG_SHORT_ORDER_COLUMN),
-                CMD_FILENAME_SEPARATOR));
+                CMD_SEPARATOR));
             exportConfig.setOrderByColumnNameList(columnNameList);
             exportConfig.setParallelMerge(getParaMerge(result));
         }
@@ -392,7 +402,7 @@ public class CommandUtil {
         consumerExecutionContext.setInsertIgnoreAndResumeEnabled(getInsertIgnoreAndResumeEnabled(result));
         consumerExecutionContext.setParallelism(getConsumerParallelism(result));
         consumerExecutionContext.setForceParallelism(getForceParallelism(result));
-        consumerExecutionContext.setTableName(getTableName(result));
+        consumerExecutionContext.setTableNames(getTableNames(result));
         consumerExecutionContext.setSqlEscapeEnabled(getSqlEscapeEnabled(result));
         consumerExecutionContext.setReadProcessFileOnly(getReadAndProcessFileOnly(result));
         consumerExecutionContext.setWhereInEnabled(getWhereInEnabled(result));
@@ -427,10 +437,6 @@ public class CommandUtil {
 
     private static String getDbName(CommandLine result) {
         return result.getOptionValue(ARG_SHORT_DBNAME);
-    }
-
-    private static String getTableName(CommandLine result) {
-        return result.getOptionValue(ARG_SHORT_TABLE);
     }
 
     private static int getConsumerParallelism(CommandLine result) {
@@ -469,7 +475,7 @@ public class CommandUtil {
     private static List<String> getFilePathList(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FROM)) {
             String filePathListStr = result.getOptionValue(ARG_SHORT_FROM);
-            return Arrays.asList(StringUtils.split(filePathListStr, CMD_FILENAME_SEPARATOR));
+            return Arrays.asList(StringUtils.split(filePathListStr, CMD_SEPARATOR));
         } else if (result.hasOption(ARG_SHORT_DIRECTORY)) {
             String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
             return FileUtil.getFileAbsPathInDir(dirPathStr);

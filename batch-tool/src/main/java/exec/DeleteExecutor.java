@@ -50,7 +50,7 @@ public class DeleteExecutor extends WriteDbExecutor {
         } else {
             doDefaultDelete();
         }
-        logger.info("删除 {} 数据完成", tableName);
+        logger.info("删除 {} 数据完成", tableNames);
     }
 
     private void doDefaultDelete() {

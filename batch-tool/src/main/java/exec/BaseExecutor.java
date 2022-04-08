@@ -74,14 +74,16 @@ public abstract class BaseExecutor {
 
     }
 
-    protected void checkTableExists(String tableName) {
-        try (Connection connection = dataSource.getConnection()) {
-            if (!DbUtil.checkTableExists(connection, tableName)) {
-                throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+    protected void checkTableExists(List<String> tableNames) {
+        for (String tableName : tableNames) {
+            try (Connection connection = dataSource.getConnection()) {
+                if (!DbUtil.checkTableExists(connection, tableName)) {
+                    throw new RuntimeException(String.format("Table [%s] does not exist", tableName));
+                }
+            } catch (SQLException | DatabaseException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e.getMessage());
             }
-        } catch (SQLException | DatabaseException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -178,8 +180,8 @@ public abstract class BaseExecutor {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            logger.error(e.toString());
-            System.exit(1);
+            logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
         logger.info("producer config {}", producerExecutionContext);
         logger.info("consumer config {}", consumerExecutionContext);

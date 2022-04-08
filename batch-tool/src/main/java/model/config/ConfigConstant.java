@@ -16,7 +16,6 @@
 
 package model.config;
 
-import java.math.BigDecimal;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -83,9 +82,9 @@ public class ConfigConstant {
     public static final String DEFAULT_SEPARATOR = ",";
 
     /**
-     * 文件名分隔符
+     * 文件名/表名分隔符
      */
-    public static final String CMD_FILENAME_SEPARATOR = ";";
+    public static final String CMD_SEPARATOR = ";";
 
     public static final int DEFAULT_READ_BLOCK_SIZE_IN_MB = 2;
 

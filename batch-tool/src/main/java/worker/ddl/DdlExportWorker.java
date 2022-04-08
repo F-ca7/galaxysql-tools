@@ -11,6 +11,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 
@@ -24,7 +25,7 @@ public class DdlExportWorker implements Runnable {
 
     private final DataSource druid;
     private final String dbName;
-    private final String tableName;
+    private final List<String> tableNames;
     /**
      * 是否导出整个数据库与其中的所有表
      */
@@ -33,19 +34,22 @@ public class DdlExportWorker implements Runnable {
     public DdlExportWorker(DataSource druid, String dbName) {
         this.druid = druid;
         this.dbName = dbName;
-        this.tableName = null;
+        try (Connection conn = druid.getConnection()) {
+            this.tableNames = DbUtil.getAllTablesInDb(conn, dbName);;
+        } catch (SQLException | DatabaseException e) {
+            throw new RuntimeException(e);
+        }
         this.isExportWholeDb = true;
         this.filename = dbName + DDL_FILE_SUFFIX;
     }
 
-    public DdlExportWorker(DataSource druid, String dbName, String tableName) {
+    public DdlExportWorker(DataSource druid, String dbName, List<String> tableNames) {
         this.druid = druid;
         this.dbName = dbName;
-        this.tableName = tableName;
+        this.tableNames = tableNames;
         this.isExportWholeDb = false;
-        this.filename = tableName + DDL_FILE_SUFFIX;
+        this.filename = dbName + DDL_FILE_SUFFIX;
     }
-
 
     @Override
     public void run() {
@@ -61,15 +65,10 @@ public class DdlExportWorker implements Runnable {
     }
 
     private void exportDdl() throws Throwable {
-        List<String> tableNames;
         try (Connection conn = druid.getConnection()) {
             if (isExportWholeDb) {
                 logger.info("库：{} 开始导出库表结构", dbName);
-                tableNames = DbUtil.getAllTablesInDb(conn, dbName);
                 exportDatabaseStructure(conn, dbName);
-            } else {
-                logger.info("表：{} 开始导出表结构", tableName);
-                tableNames = Collections.singletonList(tableName);
             }
             for (String tableName : tableNames) {
                 exportTableStructure(conn, tableName);
@@ -87,6 +86,8 @@ public class DdlExportWorker implements Runnable {
     }
 
     private void exportTableStructure(Connection conn, String tableName) throws IOException, DatabaseException {
+        logger.info("表：{} 开始导出表结构", tableName);
+
         writeCommentForTable(tableName);
         String tableDdl = DbUtil.getShowCreateTable(conn, tableName);
         writeLine(tableDdl + ";");

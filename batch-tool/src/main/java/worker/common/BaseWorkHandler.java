@@ -30,6 +30,10 @@ public abstract class BaseWorkHandler implements WorkHandler<BatchLineEvent> {
     private RateLimiter rateLimiter = null;
     protected boolean hasEscapedQuote = false;
     protected String sep;
+    /**
+     * TODO tableName 从 map 取出的内容cache在独立context中
+     */
+    protected String tableName;
 
     protected void initLocalVars() {
         if (consumerContext.isUsingBlock()) {
