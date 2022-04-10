@@ -75,6 +75,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_ENCRYPTION = "enc";
     public static final String ARG_SHORT_KEY = "key";
     public static final String ARG_SHORT_FILE_FORMAT = "format";
+    public static final String ARG_SHORT_MAX_ERROR = "error";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
@@ -142,6 +143,11 @@ public class ConfigConstant {
     public static final EncryptionConfig DEFAULT_ENCRYPTION_CONFIG = EncryptionConfig.NONE;
 
     public static final FileFormat DEFAULT_FILE_FORMAT = FileFormat.NONE;
+
+    /**
+     * 遇到错误即退出
+     */
+    public static final int DEFAULT_MAX_ERROR_COUNT = 0;
 
     public static final boolean DEFAULT_WITH_HEADER = false;
 

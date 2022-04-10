@@ -57,6 +57,8 @@ public class ProducerExecutionContext extends BaseConfig {
 
     private String historyFile;
 
+    private int maxErrorCount;
+
     private AtomicInteger emittedDataCounter;
 
     private CountDownLatch countDownLatch;
@@ -212,6 +214,14 @@ public class ProducerExecutionContext extends BaseConfig {
 
     public boolean isSingleThread() {
         return this.parallelism == 1;
+    }
+
+    public int getMaxErrorCount() {
+        return maxErrorCount;
+    }
+
+    public void setMaxErrorCount(int maxErrorCount) {
+        this.maxErrorCount = maxErrorCount;
     }
 
     @Override

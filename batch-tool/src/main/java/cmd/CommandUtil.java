@@ -383,7 +383,7 @@ public class CommandUtil {
         producerExecutionContext.setDdlMode(getDdlMode(result));
         producerExecutionContext.setCompressMode(getCompressMode(result));
         producerExecutionContext.setEncryptionConfig(getEncryptionConfig(result));
-
+        producerExecutionContext.setMaxErrorCount(getMaxErrorCount(result));
         if (result.hasOption(ARG_SHORT_HISTORY_FILE)) {
             producerExecutionContext.setHistoryFileAndParse(result.getOptionValue(ARG_SHORT_HISTORY_FILE));
         }
@@ -557,6 +557,14 @@ public class CommandUtil {
             return EncryptionConfig.parse(encryptionMode, key);
         } else {
             return DEFAULT_ENCRYPTION_CONFIG;
+        }
+    }
+
+    private static int getMaxErrorCount(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_MAX_ERROR)) {
+            return Integer.parseInt(result.getOptionValue(ARG_SHORT_MAX_ERROR));
+        } else {
+            return DEFAULT_MAX_ERROR_COUNT;
         }
     }
 
@@ -789,6 +797,12 @@ public class CommandUtil {
             .longOpt("fileformat")
             .hasArg()
             .desc("File format: NONE / TXT / CSV")
+            .build());
+        // 最大错误阈值
+        options.addOption(Option.builder(ARG_SHORT_MAX_ERROR)
+            .longOpt("max-error")
+            .hasArg()
+            .desc("Max error count threshold.")
             .build());
     }
 

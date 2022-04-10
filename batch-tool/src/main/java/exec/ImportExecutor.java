@@ -165,7 +165,8 @@ public class ImportExecutor extends WriteDbExecutor {
         DirectImportWorker directImportWorker = new DirectImportWorker(dataSource,
             consumerExecutionContext.getSeparator(), producerExecutionContext.getCharset(),
             producerExecutionContext.getFileRecordList(), tableName,
-            consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList());
+            consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList(),
+            producerExecutionContext.getMaxErrorCount());
         Thread importThread = new Thread(directImportWorker);
         importThread.start();
         try {
