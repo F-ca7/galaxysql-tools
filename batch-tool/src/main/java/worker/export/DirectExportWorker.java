@@ -18,6 +18,7 @@ package worker.export;
 
 import com.alibaba.druid.util.JdbcUtils;
 import model.config.CompressMode;
+import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import model.db.TableFieldMetaInfo;
@@ -86,10 +87,12 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode,
+                              QuoteEncloseMode quoteEncloseMode,
+                              CompressMode compressMode,
+                              FileFormat fileFormat,
                               Charset charset) {
         this(druid, topology,  tableFieldMetaInfo, 0,
-            filename, separator, isWithHeader, quoteEncloseMode, compressMode, charset);
+            filename, separator, isWithHeader, quoteEncloseMode, compressMode, fileFormat, charset);
     }
 
     /**
@@ -101,9 +104,11 @@ public class DirectExportWorker extends BaseExportWorker {
                               String filename,
                               String separator,
                               boolean isWithHeader,
-                              QuoteEncloseMode quoteEncloseMode, CompressMode compressMode,
+                              QuoteEncloseMode quoteEncloseMode,
+                              CompressMode compressMode,
+                              FileFormat fileFormat,
                               Charset charset) {
-        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode);
+        super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
@@ -137,13 +142,17 @@ public class DirectExportWorker extends BaseExportWorker {
      * 获取写入当前文件名
      */
     private String getTmpFileName() {
-        if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE) {
+        if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE
+            && this.fileFormat == FileFormat.NONE) {
             return this.filename;
         }
         StringBuilder fileNameBuilder = new StringBuilder(this.filename.length() + 6);
         fileNameBuilder.append(this.filename);
         if (curFileSeq != -1) {
             fileNameBuilder.append('-').append(curFileSeq);
+        }
+        if (this.fileFormat != FileFormat.NONE) {
+            fileNameBuilder.append(fileFormat.getSuffix());
         }
         if (this.compressMode == CompressMode.GZIP) {
             fileNameBuilder.append(".gz");

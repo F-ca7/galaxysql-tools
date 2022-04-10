@@ -24,6 +24,7 @@ import com.lmax.disruptor.WorkerPool;
 import datasource.DataSourceConfig;
 import exception.DatabaseException;
 import model.CyclicAtomicInteger;
+import model.config.FileFormat;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import model.encrypt.Cipher;
@@ -40,6 +41,7 @@ import worker.export.ExportEvent;
 import worker.export.ExportProducer;
 import worker.factory.ExportWorkerFactory;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Queue;
@@ -54,72 +56,77 @@ import static model.config.ConfigConstant.APP_NAME;
 public class ShardingExportExecutor extends BaseExportExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ShardingExportExecutor.class);
 
-    private ExecutorService executor;
-
     public ShardingExportExecutor(DataSourceConfig dataSourceConfig,
                                   DruidDataSource druid,
                                   BaseOperateCommand baseCommand) {
         super(dataSourceConfig, druid, baseCommand);
-
     }
 
     @Override
     void exportData() {
-        doExportWithSharding();
+        List<String> tableNames = command.getTableNames();
+        if (command.isDbOperation()) {
+            try (Connection conn = dataSource.getConnection()) {
+                tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+
+            } catch (SQLException | DatabaseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        for (String tableName : tableNames) {
+            doExportWithSharding(tableName);
+        }
     }
 
     /**
      * 处理分库分表导出命令
      * TODO 重构执行逻辑
      */
-    private void doExportWithSharding() {
-        for (String tableName : command.getTableNames()) {
-            String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
-                config.getFilenamePrefix(), tableName);
-            try {
-                List<TableTopology> topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
-                TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
-                    getSchemaName(), tableName);
-                // 分片数
-                final int shardSize = topologyList.size();
-                int parallelism = config.getParallelism();
-                parallelism = parallelism > 0 ? parallelism : shardSize;
-                Semaphore permitted = new Semaphore(parallelism, true);
+    private void doExportWithSharding(String tableName) {
+        String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
+            config.getFilenamePrefix(), tableName);
+        try {
+            List<TableTopology> topologyList = DbUtil.getTopology(dataSource.getConnection(), tableName);
+            TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
+                getSchemaName(), tableName);
+            // 分片数
+            final int shardSize = topologyList.size();
+            int parallelism = config.getParallelism();
+            parallelism = parallelism > 0 ? parallelism : shardSize;
+            Semaphore permitted = new Semaphore(parallelism, true);
 
-                ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
-                DirectExportWorker directExportWorker;
-                CountDownLatch countDownLatch = new CountDownLatch(shardSize);
-                switch (config.getExportWay()) {
-                case MAX_LINE_NUM_IN_SINGLE_FILE:
-                case DEFAULT:
-                    for (int i = 0; i < shardSize; i++) {
-                        directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
-                            topologyList.get(i), tableFieldMetaInfo,
-                            filePathPrefix + i, config);
-                        directExportWorker.setCountDownLatch(countDownLatch);
-                        directExportWorker.setPermitted(permitted);
-                        executor.submit(directExportWorker);
-                    }
-                    try {
-                        countDownLatch.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    break;
-                case FIXED_FILE_NUM:
-                    shardingExportWithFixedFile(topologyList, tableFieldMetaInfo, shardSize, filePathPrefix,
-                        executor, permitted, countDownLatch);
-                    break;
-                default:
-                    throw new RuntimeException("Unsupported export exception: " + config.getExportWay());
+            ExecutorService executor = MyThreadPool.createExecutorWithEnsure(APP_NAME, shardSize);
+            DirectExportWorker directExportWorker;
+            CountDownLatch countDownLatch = new CountDownLatch(shardSize);
+            switch (config.getExportWay()) {
+            case MAX_LINE_NUM_IN_SINGLE_FILE:
+            case DEFAULT:
+                for (int i = 0; i < shardSize; i++) {
+                    directExportWorker = ExportWorkerFactory.buildDefaultDirectExportWorker(dataSource,
+                        topologyList.get(i), tableFieldMetaInfo,
+                        filePathPrefix + i, config);
+                    directExportWorker.setCountDownLatch(countDownLatch);
+                    directExportWorker.setPermitted(permitted);
+                    executor.submit(directExportWorker);
                 }
-                executor.shutdown();
-                logger.info("导出 {} 数据完成", tableName);
-            } catch (DatabaseException | SQLException e) {
-                e.printStackTrace();
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case FIXED_FILE_NUM:
+                shardingExportWithFixedFile(topologyList, tableFieldMetaInfo, shardSize, filePathPrefix,
+                    executor, permitted, countDownLatch);
+                break;
+            default:
+                throw new RuntimeException("Unsupported export exception: " + config.getExportWay());
             }
+            executor.shutdown();
+            logger.info("导出 {} 数据完成", tableName);
+        } catch (DatabaseException | SQLException e) {
+            e.printStackTrace();
         }
-
     }
 
     private void shardingExportWithFixedFile(List<TableTopology> topologyList,
@@ -140,6 +147,9 @@ public class ShardingExportExecutor extends BaseExportExecutor {
         String[] filePaths = new String[consumerCount];
         for (int i = 0; i < consumers.length; i++) {
             filePaths[i] = filePathPrefix + i;
+            if (config.getFileFormat() != FileFormat.NONE) {
+                filePaths[i] += config.getFileFormat().getSuffix();
+            }
             consumers[i] = new ExportConsumer(filePaths[i], emittedDataCounter,
                 config.isWithHeader(),
                 config.getSeparator().getBytes(),

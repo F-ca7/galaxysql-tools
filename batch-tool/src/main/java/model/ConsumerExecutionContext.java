@@ -386,4 +386,8 @@ public class ConsumerExecutionContext extends BaseConfig {
     public void setUsingBlock(boolean usingBlock) {
         isUsingBlock = usingBlock;
     }
+
+    public boolean isSingleThread() {
+        return this.parallelism == 1;
+    }
 }

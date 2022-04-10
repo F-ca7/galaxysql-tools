@@ -27,6 +27,8 @@ import model.config.ConfigConstant;
 import model.config.DdlMode;
 import model.config.EncryptionConfig;
 import model.config.ExportConfig;
+import model.config.FileFormat;
+import model.config.FileRecord;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import org.apache.commons.cli.CommandLine;
@@ -45,6 +47,7 @@ import util.Version;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static model.config.ConfigConstant.*;
 
@@ -217,6 +220,7 @@ public class CommandUtil {
         exportConfig.setWhereCondition(result.getOptionValue(ARG_SHORT_WHERE));
         exportConfig.setDdlMode(getDdlMode(result));
         exportConfig.setEncryptionConfig(getEncryptionConfig(result));
+        exportConfig.setFileFormat(getFileFormat(result));
         exportConfig.setCompressMode(getCompressMode(result));
         setFileNum(result, exportConfig);
         setFileLine(result, exportConfig);
@@ -370,7 +374,7 @@ public class CommandUtil {
     private static void configureProducerContext(CommandLine result,
                                                  ProducerExecutionContext producerExecutionContext) {
 
-        producerExecutionContext.setFilePathList(getFilePathList(result));
+        producerExecutionContext.setFileRecordList(getFileRecordList(result));
         producerExecutionContext.setParallelism(getProducerParallelism(result));
         producerExecutionContext.setCharset(getCharset(result));
         producerExecutionContext.setReadBlockSizeInMb(getReadBlockSizeInMb(result));
@@ -387,7 +391,7 @@ public class CommandUtil {
             producerExecutionContext.setQuoteEncloseMode(result.getOptionValue(ARG_SHORT_QUOTE_ENCLOSE_MODE));
             if (producerExecutionContext.getQuoteEncloseMode() == QuoteEncloseMode.FORCE) {
                 // 指定引号转义模式则采用安全的方式执行
-                producerExecutionContext.setParallelism(producerExecutionContext.getFilePathList().size());
+                producerExecutionContext.setParallelism(producerExecutionContext.getFileRecordList().size());
             }
         }
     }
@@ -472,13 +476,32 @@ public class CommandUtil {
         }
     }
 
-    private static List<String> getFilePathList(CommandLine result) {
+    /**
+     * 解析文件路径与行号
+     * 并检测文件是否存在
+     */
+    private static List<FileRecord> getFileRecordList(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FROM)) {
             String filePathListStr = result.getOptionValue(ARG_SHORT_FROM);
-            return Arrays.asList(StringUtils.split(filePathListStr, CMD_SEPARATOR));
+            return Arrays.stream(StringUtils.split(filePathListStr, CMD_SEPARATOR))
+                .filter(StringUtils::isNotBlank)
+                .map(s -> {
+                    String[] strs = StringUtils.split(s, CMD_FILE_LINE_SEPARATOR);
+                    if (strs.length == 1) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0]);
+                        return new FileRecord(fileAbsPath);
+                    } else if (strs.length == 2) {
+                        String fileAbsPath = FileUtil.getFileAbsPath(strs[0]);
+                        int startLine = Integer.parseInt(strs[1]);
+                        return new FileRecord(fileAbsPath, startLine);
+                    } else {
+                        throw new IllegalArgumentException("Illegal file: " + s);
+                    }
+                }).collect(Collectors.toList());
         } else if (result.hasOption(ARG_SHORT_DIRECTORY)) {
             String dirPathStr = result.getOptionValue(ARG_SHORT_DIRECTORY);
-            return FileUtil.getFileAbsPathInDir(dirPathStr);
+            List<String> filePaths = FileUtil.getFilesAbsPathInDir(dirPathStr);
+            return FileRecord.fromFilePaths(filePaths);
         }
         throw new IllegalStateException("cannot get file path list");
     }
@@ -534,6 +557,15 @@ public class CommandUtil {
             return EncryptionConfig.parse(encryptionMode, key);
         } else {
             return DEFAULT_ENCRYPTION_CONFIG;
+        }
+    }
+
+    private static FileFormat getFileFormat(CommandLine result) {
+        if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
+            String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);
+            return FileFormat.fromString(fileFormat);
+        } else {
+            return DEFAULT_FILE_FORMAT;
         }
     }
 
@@ -751,6 +783,12 @@ public class CommandUtil {
             .longOpt("key")
             .hasArg()
             .desc("Encryption key (string).")
+            .build());
+        // 文件格式
+        options.addOption(Option.builder(ARG_SHORT_FILE_FORMAT)
+            .longOpt("fileformat")
+            .hasArg()
+            .desc("File format: NONE / TXT / CSV")
             .build());
     }
 

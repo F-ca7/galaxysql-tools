@@ -74,6 +74,7 @@ public class ConfigConstant {
     public static final String ARG_SHORT_COMPRESS = "comp";
     public static final String ARG_SHORT_ENCRYPTION = "enc";
     public static final String ARG_SHORT_KEY = "key";
+    public static final String ARG_SHORT_FILE_FORMAT = "format";
 
     public static final int CPU_NUM = Runtime.getRuntime().availableProcessors();
     /**
@@ -85,6 +86,11 @@ public class ConfigConstant {
      * 文件名/表名分隔符
      */
     public static final String CMD_SEPARATOR = ";";
+
+    /**
+     * 文件名起始行号分隔符
+     */
+    public static final String CMD_FILE_LINE_SEPARATOR = ":";
 
     public static final int DEFAULT_READ_BLOCK_SIZE_IN_MB = 2;
 
@@ -134,6 +140,8 @@ public class ConfigConstant {
     public static final CompressMode DEFAULT_COMPRESS_MODE = CompressMode.NONE;
 
     public static final EncryptionConfig DEFAULT_ENCRYPTION_CONFIG = EncryptionConfig.NONE;
+
+    public static final FileFormat DEFAULT_FILE_FORMAT = FileFormat.NONE;
 
     public static final boolean DEFAULT_WITH_HEADER = false;
 

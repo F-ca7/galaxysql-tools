@@ -141,7 +141,7 @@ public abstract class BaseExecutor {
         CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
         AtomicInteger emittedDataCounter = new AtomicInteger(0);
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
-        for (int i = 0; i < producerExecutionContext.getFilePathList().size(); i++) {
+        for (int i = 0; i < producerExecutionContext.getFileRecordList().size(); i++) {
             eventCounter.add(new ConcurrentHashMap<Long, AtomicInteger>(16));
         }
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);

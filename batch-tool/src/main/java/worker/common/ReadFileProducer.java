@@ -18,6 +18,7 @@ package worker.common;
 
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
+import model.config.FileRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,12 +41,14 @@ public abstract class ReadFileProducer {
                             String tableName) {
         this.context = context;
         this.ringBuffer = ringBuffer;
-        List<String> allFilePathList = context.getFilePathList();
+        List<FileRecord> allFilePathList = context.getFileRecordList();
         if (allFilePathList == null || allFilePathList.isEmpty()) {
             throw new IllegalArgumentException("File path list cannot be empty");
         }
         // FIXME 文件名与表名的匹配判断
-        List<String> filePathList = allFilePathList.stream().filter(name -> name.contains(tableName))
+        List<String> filePathList = allFilePathList.stream()
+            .map(FileRecord::getFilePath)
+            .filter(filePath -> filePath.contains(tableName))
             .collect(Collectors.toList());
         if (filePathList.isEmpty()) {
             throw new IllegalArgumentException("No filename contains table: " + tableName);

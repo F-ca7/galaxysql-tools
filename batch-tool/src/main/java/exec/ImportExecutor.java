@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import worker.ddl.DdlImportWorker;
+import worker.insert.DirectImportWorker;
 import worker.insert.ImportConsumer;
 import worker.insert.ProcessOnlyImportConsumer;
 import worker.insert.ShardedImportConsumer;
@@ -62,9 +63,14 @@ public class ImportExecutor extends WriteDbExecutor {
             }
         } else {
             if (command.isDbOperation()) {
-                throw new UnsupportedOperationException("Don't support import database now");
+                try (Connection conn = dataSource.getConnection()) {
+                    this.tableNames = DbUtil.getAllTablesInDb(conn, command.getDbName());
+                } catch (SQLException | DatabaseException e) {
+                    throw new RuntimeException(e);
+                }
             } else {
                 checkTableExists(command.getTableNames());
+                this.tableNames = command.getTableNames();
             }
         }
     }
@@ -115,11 +121,18 @@ public class ImportExecutor extends WriteDbExecutor {
         }
         configureFieldMetaInfo();
         for (String tableName : tableNames) {
-            if (command.isShardingEnabled()) {
-                doShardingImport(tableName);
+            if (producerExecutionContext.isSingleThread()
+                && consumerExecutionContext.isSingleThread())  {
+                // 使用按行读取insert模式
+                doSingleThreadImport(tableName);
             } else {
-                doDefaultImport(tableName);
+                if (command.isShardingEnabled()) {
+                    doShardingImport(tableName);
+                } else {
+                    doDefaultImport(tableName);
+                }
             }
+
             logger.info("导入数据到 {} 完成", tableName);
         }
     }
@@ -130,10 +143,11 @@ public class ImportExecutor extends WriteDbExecutor {
     private void handleDDL() {
         DdlImportWorker ddlImportWorker;
         if (command.isDbOperation()) {
-            if (producerExecutionContext.getFilePathList().size() != 1) {
+            if (producerExecutionContext.getFileRecordList().size() != 1) {
                 throw new UnsupportedOperationException("Import database DDL only support one ddl file now!");
             }
-            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFilePathList().get(0), dataSource);
+            ddlImportWorker = new DdlImportWorker(producerExecutionContext.getFileRecordList()
+                .get(0).getFilePath(), dataSource);
         } else {
             ddlImportWorker = new DdlImportWorker(command.getTableNames(), dataSource);
         }
@@ -142,6 +156,20 @@ public class ImportExecutor extends WriteDbExecutor {
         ddlThread.start();
         try {
             ddlThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void doSingleThreadImport(String tableName) {
+        DirectImportWorker directImportWorker = new DirectImportWorker(dataSource,
+            consumerExecutionContext.getSeparator(), producerExecutionContext.getCharset(),
+            producerExecutionContext.getFileRecordList(), tableName,
+            consumerExecutionContext.getTableFieldMetaInfo(tableName).getFieldMetaInfoList());
+        Thread importThread = new Thread(directImportWorker);
+        importThread.start();
+        try {
+            importThread.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

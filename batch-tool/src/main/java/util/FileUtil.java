@@ -367,7 +367,7 @@ public class FileUtil {
     /**
      * 筛选出非ddl的数据文件
      */
-    public static List<String> getFileAbsPathInDir(String dirPathStr) {
+    public static List<String> getFilesAbsPathInDir(String dirPathStr) {
         File dir = new File(dirPathStr);
         if (!dir.exists()|| !dir.isDirectory()) {
             throw new IllegalArgumentException(String.format("[%s] does not exist or is not a directory", dirPathStr));
@@ -376,5 +376,13 @@ public class FileUtil {
             .filter(file -> file.isFile() && file.canRead() &&
                 !file.getName().endsWith(ConfigConstant.DDL_FILE_SUFFIX))
             .map(File::getAbsolutePath).collect(Collectors.toList());
+    }
+
+    public static String getFileAbsPath(String filename) {
+        File file = new File(filename);
+        if (!file.exists() || !file.isFile() || !file.canRead()) {
+            throw new IllegalArgumentException("Failed to read from " + filename);
+        }
+        return file.getAbsolutePath();
     }
 }

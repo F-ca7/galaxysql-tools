@@ -45,6 +45,8 @@ public class BaseConfig {
 
     protected EncryptionConfig encryptionConfig = EncryptionConfig.NONE;
 
+    protected FileFormat fileFormat = FileFormat.NONE;
+
     /**
      * 引号模式
      */
@@ -130,6 +132,16 @@ public class BaseConfig {
         this.quoteEncloseMode = QuoteEncloseMode.parseMode(Mode);
     }
 
+    public FileFormat getFileFormat() {
+        return fileFormat;
+    }
+
+    public void setFileFormat(FileFormat fileFormat) {
+        if (this.compressMode != CompressMode.NONE && fileFormat != FileFormat.NONE) {
+            throw new IllegalArgumentException("Do not support file format in compression mode");
+        }
+        this.fileFormat = fileFormat;
+    }
 
     @Override
     public String toString() {

@@ -30,14 +30,14 @@ public class ExportWorkerFactory {
                 config.getLimitNum(),
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
                 topology, tableFieldMetaInfo,
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
             break;
         case FIXED_FILE_NUM:
         default:

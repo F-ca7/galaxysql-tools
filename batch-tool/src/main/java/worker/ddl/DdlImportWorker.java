@@ -3,6 +3,7 @@ package worker.ddl;
 import model.config.ConfigConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.FileUtil;
 import util.IOUtil;
 
 import javax.sql.DataSource;
@@ -38,11 +39,8 @@ public class DdlImportWorker implements Runnable {
         this.dataSource = dataSource;
         for (String name : tableNames) {
             String filename = name + ConfigConstant.DDL_FILE_SUFFIX;
-            File file = new File(filename);
-            if (!file.exists() || !file.isFile()) {
-                throw new IllegalStateException("File " + filename + " does not exist");
-            }
-            this.filepaths.add(file.getAbsolutePath());
+            String fileAbsPath = FileUtil.getFileAbsPath(filename);
+            this.filepaths.add(fileAbsPath);
         }
     }
 
