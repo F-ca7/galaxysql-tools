@@ -1,6 +1,7 @@
 package model.encrypt;
 
 import model.config.EncryptionConfig;
+import model.config.EncryptionMode;
 
 public abstract class Cipher {
 
@@ -47,5 +48,12 @@ public abstract class Cipher {
 
     public EncryptionConfig getEncryptionConfig() {
         return encryptionConfig;
+    }
+
+    /**
+     * 支持定长块的加解密（加密前后字节数不变）
+     */
+    public boolean supportBlock() {
+        return encryptionConfig.getEncryptionMode().isSupportStreamingBit();
     }
 }

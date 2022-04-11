@@ -28,7 +28,6 @@ import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
-import util.DbUtil;
 import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
@@ -115,6 +114,12 @@ public class DirectExportWorker extends BaseExportWorker {
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
+        initFileSeq();
+        this.fileWriter = initFileWriter(charset);
+        createNewFile();
+    }
+
+    private void initFileSeq() {
         if (isLimitLine()) {
             this.curFileSeq = 0;
             if (maxLine < GlobalVar.EMIT_BATCH_SIZE) {
@@ -124,14 +129,15 @@ public class DirectExportWorker extends BaseExportWorker {
         } else {
             this.curFileSeq = NO_FILE_SEQ;
         }
+    }
+
+    private IFileWriter initFileWriter(Charset charset) {
         switch (fileFormat) {
         case XLSX:
-            this.fileWriter = new XlsxFileWriter();
-            break;
+            return new XlsxFileWriter();
         default:
-            this.fileWriter = new NioFileWriter(compressMode, charset);
+            return new NioFileWriter(compressMode, charset);
         }
-        createNewFile();
     }
 
     /**
@@ -178,10 +184,10 @@ public class DirectExportWorker extends BaseExportWorker {
     public void run() {
         beforeRun();
         try {
-            if (produceByLine()) {
-                produceDataByLine();
-            } else {
+            if (produceByBlock()) {
                 produceData();
+            } else {
+                produceDataByLine();
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -190,19 +196,14 @@ public class DirectExportWorker extends BaseExportWorker {
         }
     }
 
-    private boolean produceByLine() {
-        if (fileFormat == FileFormat.XLSX) {
-            return true;
-        }
-        if (this.cipher == null) {
+    private boolean produceByBlock() {
+        if (!fileFormat.isSupportBlock()) {
             return false;
         }
-        EncryptionMode encryptionMode = this.cipher.getEncryptionConfig()
-            .getEncryptionMode();
-        if (encryptionMode != EncryptionMode.NONE && encryptionMode != EncryptionMode.CAESAR) {
+        if (this.cipher == null) {
             return true;
         }
-        return false;
+        return cipher.supportBlock();
     }
 
     private void beforeRun() {
@@ -220,22 +221,20 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void produceData() {
-        Statement stmt = null;
-        ResultSet resultSet = null;
-        Connection conn = null;
-        try {
+        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+
+        try (Connection conn = druid.getConnection();
+            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
+            ResultSet resultSet = stmt.executeQuery(sql)) {
+
             logger.info("{} 开始导出", topology);
-            String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
-                tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
             // 字段数
             int colNum;
             // 已经缓存的行数
             int bufferedRowNum = 0;
             byte[] value;
             ByteArrayOutputStream os = new ByteArrayOutputStream();
-            conn = druid.getConnection();
-            stmt = DataSourceUtil.createStreamingStatement(conn);
-            resultSet = stmt.executeQuery(sql);
             colNum = resultSet.getMetaData().getColumnCount();
             while (resultSet.next()) {
                 for (int i = 1; i < colNum; i++) {
@@ -274,11 +273,6 @@ public class DirectExportWorker extends BaseExportWorker {
             logger.info("{} 导出完成", topology);
         } catch (SQLException | IOException e) {
             e.printStackTrace();
-            logger.error(e.getMessage());
-        } finally {
-            JdbcUtils.close(resultSet);
-            JdbcUtils.close(stmt);
-            JdbcUtils.close(conn);
         }
     }
 
@@ -288,7 +282,6 @@ public class DirectExportWorker extends BaseExportWorker {
             try {
                 data = cipher.encrypt(data);
             } catch (Exception e) {
-                e.printStackTrace();
                 logger.error(e.getMessage());
                 throw new RuntimeException(e);
             }
@@ -306,12 +299,10 @@ public class DirectExportWorker extends BaseExportWorker {
         try (Connection conn = druid.getConnection();
             Statement stmt = DataSourceUtil.createStreamingStatement(conn);
             ResultSet rs = stmt.executeQuery(sql)) {
-
-
-
+            // todo
+            throw new UnsupportedOperationException("produceDataByLine");
         } catch (SQLException e) {
             e.printStackTrace();
-            logger.error(e.getMessage());
         }
     }
 

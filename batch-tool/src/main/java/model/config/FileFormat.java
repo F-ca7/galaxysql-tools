@@ -1,15 +1,21 @@
 package model.config;
 
 public enum FileFormat {
-    NONE(""),
-    TXT(".txt"),
-    CSV(".csv"),
-    XLSX(".xlsx");
+    NONE("", true),
+    TXT(".txt", true),
+    CSV(".csv", true),
+    XLSX(".xlsx", false);
 
     private final String suffix;
 
-    FileFormat(String suffix) {
+    /**
+     * 支持按定长块读写
+     */
+    private final boolean supportBlock;
+
+    FileFormat(String suffix, boolean supportBlock) {
         this.suffix = suffix;
+        this.supportBlock = supportBlock;
     }
 
     public static FileFormat fromString(String compressMode) {
@@ -29,4 +35,9 @@ public enum FileFormat {
     public String getSuffix() {
         return suffix;
     }
+
+    public boolean isSupportBlock() {
+        return supportBlock;
+    }
+
 }

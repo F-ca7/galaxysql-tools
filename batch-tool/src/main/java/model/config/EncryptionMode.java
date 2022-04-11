@@ -2,9 +2,15 @@ package model.config;
 
 public enum EncryptionMode {
 
-    NONE,
-    CAESAR,     // naive Caesar encryption
-    AES_CBC;    // AES/CBC/PKCS5Padding
+    NONE(true),
+    CAESAR(true),     // naive Caesar encryption
+    AES_CBC(false);    // AES/CBC/PKCS5Padding
+
+    private final boolean supportStreamingBit;
+
+    EncryptionMode(boolean supportStreamingBit) {
+        this.supportStreamingBit = supportStreamingBit;
+    }
 
     static EncryptionMode fromString(String encryptionMode) {
         switch (encryptionMode.toUpperCase()) {
@@ -19,5 +25,9 @@ public enum EncryptionMode {
         default:
             throw new IllegalArgumentException("Unrecognized encryption mode: " + encryptionMode);
         }
+    }
+
+    public boolean isSupportStreamingBit() {
+        return supportStreamingBit;
     }
 }
