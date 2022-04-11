@@ -31,7 +31,8 @@ import org.slf4j.LoggerFactory;
 import util.DbUtil;
 import util.FileUtil;
 import worker.MyThreadPool;
-import worker.export.order.DirectOrderByExportWorker;
+import worker.export.DirectExportWorker;
+import worker.export.order.DirectOrderExportWorker;
 import worker.export.order.LocalOrderByExportProducer;
 import worker.export.order.OrderByExportEvent;
 import worker.export.order.OrderByExportProducer;
@@ -169,8 +170,8 @@ public class OrderByExportExecutor extends BaseExportExecutor {
             try {
                 TableFieldMetaInfo tableFieldMetaInfo = DbUtil.getTableFieldMetaInfo(dataSource.getConnection(),
                     getSchemaName(), tableName);
-                DirectOrderByExportWorker directOrderByExportWorker = ExportWorkerFactory
-                    .buildDirectExportWorker(dataSource, tableFieldMetaInfo, command, tableName);
+                DirectOrderExportWorker directOrderByExportWorker = ExportWorkerFactory
+                    .buildDirectOrderExportWorker(dataSource, tableFieldMetaInfo, command, tableName);
                 // 就单线程地写入
                 directOrderByExportWorker.produceData();
                 logger.info("导出 {} 数据完成", tableName);

@@ -18,6 +18,7 @@ package worker.export;
 
 import com.alibaba.druid.util.JdbcUtils;
 import model.config.CompressMode;
+import model.config.EncryptionMode;
 import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
@@ -27,9 +28,11 @@ import model.encrypt.Cipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
+import util.DbUtil;
 import util.FileUtil;
 import worker.common.IFileWriter;
 import worker.common.NioFileWriter;
+import worker.common.XlsxFileWriter;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
@@ -121,7 +124,13 @@ public class DirectExportWorker extends BaseExportWorker {
         } else {
             this.curFileSeq = NO_FILE_SEQ;
         }
-        this.fileWriter = new NioFileWriter(compressMode, charset);
+        switch (fileFormat) {
+        case XLSX:
+            this.fileWriter = new XlsxFileWriter();
+            break;
+        default:
+            this.fileWriter = new NioFileWriter(compressMode, charset);
+        }
         createNewFile();
     }
 
@@ -169,10 +178,31 @@ public class DirectExportWorker extends BaseExportWorker {
     public void run() {
         beforeRun();
         try {
-            produceData();
+            if (produceByLine()) {
+                produceDataByLine();
+            } else {
+                produceData();
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage());
         } finally {
             afterRun();
         }
+    }
+
+    private boolean produceByLine() {
+        if (fileFormat == FileFormat.XLSX) {
+            return true;
+        }
+        if (this.cipher == null) {
+            return false;
+        }
+        EncryptionMode encryptionMode = this.cipher.getEncryptionConfig()
+            .getEncryptionMode();
+        if (encryptionMode != EncryptionMode.NONE && encryptionMode != EncryptionMode.CAESAR) {
+            return true;
+        }
+        return false;
     }
 
     private void beforeRun() {
@@ -265,6 +295,24 @@ public class DirectExportWorker extends BaseExportWorker {
         }
         fileWriter.write(data);
         os.reset();
+    }
+
+    /**
+     * 按行从数据库中读取并写入文件
+     */
+    private void produceDataByLine() {
+        String sql = ExportUtil.getDirectSqlWithFormattedDate(topology,
+            tableFieldMetaInfo.getFieldMetaInfoList(), whereCondition);
+        try (Connection conn = druid.getConnection();
+            Statement stmt = DataSourceUtil.createStreamingStatement(conn);
+            ResultSet rs = stmt.executeQuery(sql)) {
+
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            logger.error(e.getMessage());
+        }
     }
 
     private boolean isLimitLine() {

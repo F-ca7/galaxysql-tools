@@ -193,6 +193,7 @@ public class FileUtil {
         StringBuilder stringBuilder = new StringBuilder(line.length() / expectedCount);
         char sepStart = sep.charAt(0);
         boolean enclosingByQuote = false;
+        boolean endsWithSep = false;
         for (int i = 0; i < len; i++) {
             if (i == len - 1 && chars[i] != '\"') {
                 // 最后一个字符
@@ -246,12 +247,18 @@ public class FileUtil {
                     stringBuilder.setLength(0);
                     enclosingByQuote = false;
                     i += sep.length() - 1;
+                    if (i == len -1) {
+                        endsWithSep = true;
+                    }
                 } else {
                     stringBuilder.append(chars[i]);
                 }
             } else {
                 stringBuilder.append(chars[i]);
             }
+        }
+        if (endsWithSep && !withLastSep) {
+            subStrings.add("");
         }
         return subStrings;
     }

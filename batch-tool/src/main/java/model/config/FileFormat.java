@@ -3,7 +3,8 @@ package model.config;
 public enum FileFormat {
     NONE(""),
     TXT(".txt"),
-    CSV(".csv");
+    CSV(".csv"),
+    XLSX(".xlsx");
 
     private final String suffix;
 
@@ -12,7 +13,7 @@ public enum FileFormat {
     }
 
     public static FileFormat fromString(String compressMode) {
-        // NONE / TXT / CSV
+        // NONE / TXT / CSV / XLXS
         switch (compressMode.toUpperCase()) {
         case "NONE":
             return NONE;

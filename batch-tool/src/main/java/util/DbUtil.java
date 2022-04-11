@@ -547,7 +547,7 @@ public class DbUtil {
 
     public static boolean checkTableExists(Connection conn, String tableName) throws DatabaseException {
         try (Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(String.format("show tables like `%s`", tableName));
+            ResultSet rs = stmt.executeQuery(String.format("show tables like '%s'", tableName));
             return rs.next();
         } catch (SQLException e) {
             throw new DatabaseException("Failed to check table existence: " + tableName, e);

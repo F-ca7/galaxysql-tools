@@ -45,6 +45,13 @@ public abstract class ReadFileProducer {
         if (allFilePathList == null || allFilePathList.isEmpty()) {
             throw new IllegalArgumentException("File path list cannot be empty");
         }
+        this.fileList = new ArrayList<>(allFilePathList.size());
+        if (allFilePathList.size() == 1) {
+            // 当只有一个文件时 无需匹配表名与文件名
+            initFileList(allFilePathList.stream()
+                .map(FileRecord::getFilePath).collect(Collectors.toList()));
+            return;
+        }
         // FIXME 文件名与表名的匹配判断
         List<String> filePathList = allFilePathList.stream()
             .map(FileRecord::getFilePath)
@@ -53,7 +60,6 @@ public abstract class ReadFileProducer {
         if (filePathList.isEmpty()) {
             throw new IllegalArgumentException("No filename contains table: " + tableName);
         }
-        this.fileList = new ArrayList<>(allFilePathList.size());
         initFileList(filePathList);
     }
 

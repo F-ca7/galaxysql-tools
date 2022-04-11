@@ -9,7 +9,7 @@ import model.encrypt.Cipher;
 import util.DbUtil;
 import util.FileUtil;
 import worker.export.DirectExportWorker;
-import worker.export.order.DirectOrderByExportWorker;
+import worker.export.order.DirectOrderExportWorker;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
@@ -48,10 +48,10 @@ public class ExportWorkerFactory {
         return directExportWorker;
     }
 
-    public static DirectOrderByExportWorker buildDirectExportWorker(DataSource druid,
-                                                                    TableFieldMetaInfo tableFieldMetaInfo,
-                                                                    ExportCommand command,
-                                                                    String tableName) {
+    public static DirectOrderExportWorker buildDirectOrderExportWorker(DataSource druid,
+                                                                       TableFieldMetaInfo tableFieldMetaInfo,
+                                                                       ExportCommand command,
+                                                                       String tableName) {
         ExportConfig config = command.getExportConfig();
         String filePathPrefix = FileUtil.getFilePathPrefix(config.getPath(),
             config.getFilenamePrefix(), tableName);
@@ -76,7 +76,7 @@ public class ExportWorkerFactory {
         default:
             break;
         }
-        return new DirectOrderByExportWorker(druid, filePathPrefix,
+        return new DirectOrderExportWorker(druid, filePathPrefix,
                 tableFieldMetaInfo,
                 tableName, config.getOrderByColumnNameList(), maxLine,
                 config.getSeparator().getBytes(),
