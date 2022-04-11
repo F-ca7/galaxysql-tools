@@ -195,17 +195,26 @@ public class FileUtil {
         boolean enclosingByQuote = false;
         boolean endsWithSep = false;
         for (int i = 0; i < len; i++) {
-            if (i == len - 1 && chars[i] != '\"') {
+            if (i == len - 1) {
                 // 最后一个字符
-                if (!hasEscapedQuote && enclosingByQuote) {
-                    badFormatException("Unclosed quote", line);
-                } else {
-                    // 说明当前为最后一个字段
+                if (chars[i] == '\"' && hasEscapedQuote) {
                     stringBuilder.append(chars[i]);
                     subStrings.add(stringBuilder.toString());
                     stringBuilder.setLength(0);
-                    enclosingByQuote = false;
+                    break;
                 }
+                if (chars[i] != '\"') {
+                    if (!hasEscapedQuote && enclosingByQuote) {
+                        badFormatException("Unclosed quote", line);
+                    } else {
+                        // 说明当前为最后一个字段
+                        stringBuilder.append(chars[i]);
+                        subStrings.add(stringBuilder.toString());
+                        stringBuilder.setLength(0);
+                    }
+                    break;
+                }
+                badFormatException("Failed to split", line);
             }
             if (chars[i] == '\"' && !hasEscapedQuote) {
                 if (!enclosingByQuote) {

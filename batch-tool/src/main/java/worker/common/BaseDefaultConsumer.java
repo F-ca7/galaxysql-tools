@@ -60,10 +60,9 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
                 execSql(stringBuilder);
             }
         } catch (Exception e) {
-            e.printStackTrace();
             logger.error(e.getMessage());
             // 认为无法恢复
-            System.exit(1);
+            throw new RuntimeException(e);
         } finally {
             consumerContext.getEmittedDataCounter().getAndDecrement();
             if (consumerContext.isUsingBlock()) {
