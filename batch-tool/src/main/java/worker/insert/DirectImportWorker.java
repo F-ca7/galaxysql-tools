@@ -4,7 +4,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
-import model.config.FileRecord;
+import model.config.FileLineRecord;
 import model.db.FieldMetaInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class DirectImportWorker implements Runnable {
 
     private final DataSource dataSource;
     private final char sep;
-    private final List<FileRecord> fileRecords;
+    private final List<FileLineRecord> fileRecords;
     private final String tableName;
     private final Charset charset;
     private final List<FieldMetaInfo> fieldMetaInfoList;
@@ -40,7 +40,7 @@ public class DirectImportWorker implements Runnable {
 
     public DirectImportWorker(DataSource dataSource, String sep,
                               Charset charset,
-                              List<FileRecord> fileRecords, String tableName,
+                              List<FileLineRecord> fileRecords, String tableName,
                               List<FieldMetaInfo> fieldMetaInfoList,
                               int maxErrorCount) {
         if (sep.length() != 1) {
@@ -64,7 +64,7 @@ public class DirectImportWorker implements Runnable {
         String prepareSql = DbUtil.getPrepareInsertSql(tableName, fieldMetaInfoList.size(), true);
         try (Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(prepareSql)) {
-            for (FileRecord fileRecord : fileRecords) {
+            for (FileLineRecord fileRecord : fileRecords) {
                 String filePath = fileRecord.getFilePath();
                 int startLine = fileRecord.getStartLine();
                 curFile = filePath;

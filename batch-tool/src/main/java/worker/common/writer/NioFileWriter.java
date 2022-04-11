@@ -1,4 +1,4 @@
-package worker.common;
+package worker.common.writer;
 
 import model.config.CompressMode;
 import util.FileUtil;

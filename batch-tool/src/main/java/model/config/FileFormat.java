@@ -19,7 +19,7 @@ public enum FileFormat {
     }
 
     public static FileFormat fromString(String compressMode) {
-        // NONE / TXT / CSV / XLXS
+        // NONE / TXT / CSV / XLSX
         switch (compressMode.toUpperCase()) {
         case "NONE":
             return NONE;
@@ -27,6 +27,8 @@ public enum FileFormat {
             return TXT;
         case "CSV":
             return CSV;
+        case "XLSX":
+            return XLSX;
         default:
             throw new IllegalArgumentException("Unrecognized file format: " + compressMode);
         }

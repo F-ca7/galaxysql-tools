@@ -1,4 +1,4 @@
-package worker.common;
+package worker.common.writer;
 
 public interface IFileWriter {
 

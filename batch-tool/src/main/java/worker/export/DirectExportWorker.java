@@ -16,9 +16,7 @@
 
 package worker.export;
 
-import com.alibaba.druid.util.JdbcUtils;
 import model.config.CompressMode;
-import model.config.EncryptionMode;
 import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
@@ -29,9 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
 import util.FileUtil;
-import worker.common.IFileWriter;
-import worker.common.NioFileWriter;
-import worker.common.XlsxFileWriter;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
+import worker.common.writer.XlsxFileWriter;
 import worker.util.ExportUtil;
 
 import javax.sql.DataSource;
@@ -146,7 +144,7 @@ public class DirectExportWorker extends BaseExportWorker {
      * 并根据开关 向文件写入字段名
      */
     private void createNewFile() {
-        String tmpFileName = getTmpFileName();
+        String tmpFileName = getTmpFilename();
         fileWriter.nextFile(tmpFileName);
         if (isWithHeader) {
             appendHeader();
@@ -156,23 +154,23 @@ public class DirectExportWorker extends BaseExportWorker {
     /**
      * 获取写入当前文件名
      */
-    private String getTmpFileName() {
+    private String getTmpFilename() {
         if (this.curFileSeq == -1 && this.compressMode == CompressMode.NONE
             && this.fileFormat == FileFormat.NONE) {
             return this.filename;
         }
-        StringBuilder fileNameBuilder = new StringBuilder(this.filename.length() + 6);
-        fileNameBuilder.append(this.filename);
+        StringBuilder filenameBuilder = new StringBuilder(this.filename.length() + 6);
+        filenameBuilder.append(this.filename);
         if (curFileSeq != -1) {
-            fileNameBuilder.append('-').append(curFileSeq);
+            filenameBuilder.append('-').append(curFileSeq);
         }
         if (this.fileFormat != FileFormat.NONE) {
-            fileNameBuilder.append(fileFormat.getSuffix());
+            filenameBuilder.append(fileFormat.getSuffix());
         }
         if (this.compressMode == CompressMode.GZIP) {
-            fileNameBuilder.append(".gz");
+            filenameBuilder.append(".gz");
         }
-        return fileNameBuilder.toString();
+        return filenameBuilder.toString();
     }
 
     private void appendHeader() {
@@ -299,8 +297,20 @@ public class DirectExportWorker extends BaseExportWorker {
         try (Connection conn = druid.getConnection();
             Statement stmt = DataSourceUtil.createStreamingStatement(conn);
             ResultSet rs = stmt.executeQuery(sql)) {
-            // todo
-            throw new UnsupportedOperationException("produceDataByLine");
+            int colNum = rs.getMetaData().getColumnCount();
+            int line = 0;
+            while (rs.next()) {
+                line++;
+                String[] values = new String[colNum];
+                for (int i = 1; i < colNum + 1; i++) {
+                    String value = rs.getString(i);
+                    values[i -1] = value != null ? value : FileUtil.NULL_ESC_STR;
+                }
+                fileWriter.writeLine(values);
+                if (line % 1000 == 0) {
+                    logger.info("Current written lines: " + line);
+                }
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

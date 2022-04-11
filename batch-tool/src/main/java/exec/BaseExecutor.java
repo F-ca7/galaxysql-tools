@@ -34,6 +34,7 @@ import model.ConsumerExecutionContext;
 import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
 import model.config.ExportConfig;
+import model.config.FileLineRecord;
 import model.config.GlobalVar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public abstract class BaseExecutor {
     private static final Logger logger = LoggerFactory.getLogger(BaseExecutor.class);
@@ -135,14 +137,19 @@ public abstract class BaseExecutor {
                                                 ConsumerExecutionContext consumerExecutionContext,
                                                 String tableName,
                                                 boolean usingBlockReader) {
+        List<FileLineRecord> fileLineRecordList =
+            getFileRecordList(producerExecutionContext.getFileLineRecordList(), tableName);
+        if (!usingBlockReader) {
+            producerExecutionContext.setParallelism(fileLineRecordList.size());
+        }
         ThreadPoolExecutor producerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-producer",
             producerExecutionContext.getParallelism());
         producerExecutionContext.setProducerExecutor(producerThreadPool);
         CountDownLatch countDownLatch = new CountDownLatch(producerExecutionContext.getParallelism());
         AtomicInteger emittedDataCounter = new AtomicInteger(0);
         List<ConcurrentHashMap<Long, AtomicInteger>> eventCounter = new ArrayList<>();
-        for (int i = 0; i < producerExecutionContext.getFileRecordList().size(); i++) {
-            eventCounter.add(new ConcurrentHashMap<Long, AtomicInteger>(16));
+        for (int i = 0; i < producerExecutionContext.getFileLineRecordList().size(); i++) {
+            eventCounter.add(new ConcurrentHashMap<>(16));
         }
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
         producerExecutionContext.setCountDownLatch(countDownLatch);
@@ -194,9 +201,9 @@ public abstract class BaseExecutor {
 
         ReadFileProducer producer;
         if (usingBlockReader) {
-            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, tableName);
+            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
         } else {
-            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, tableName);
+            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
         }
 
         try {
@@ -216,6 +223,27 @@ public abstract class BaseExecutor {
         workerPool.halt();
         consumerThreadPool.shutdown();
         producerThreadPool.shutdown();
+    }
+
+    /**
+     * 获取当前导入表对应的文件路径
+     */
+    private List<FileLineRecord> getFileRecordList(List<FileLineRecord> allFilePathList, String tableName) {
+        if (allFilePathList == null || allFilePathList.isEmpty()) {
+            throw new IllegalArgumentException("File path list cannot be empty");
+        }
+        if (allFilePathList.size() == 1) {
+            // 当只有一个文件时 无需匹配表名与文件名
+            return allFilePathList;
+        }
+        // 匹配文件名与表名
+        List<FileLineRecord> fileRecordList = allFilePathList.stream()
+            .filter(fileRecord -> fileRecord.getFilePath().contains(tableName))
+            .collect(Collectors.toList());
+        if (fileRecordList.isEmpty()) {
+            throw new IllegalArgumentException("No filename contains table: " + tableName);
+        }
+        return fileRecordList;
     }
 
     /**

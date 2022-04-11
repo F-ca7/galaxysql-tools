@@ -21,14 +21,13 @@ import model.config.CompressMode;
 import model.db.TableFieldMetaInfo;
 import model.encrypt.Cipher;
 import util.FileUtil;
-import worker.common.IFileWriter;
-import worker.common.NioFileWriter;
+import worker.common.writer.IFileWriter;
+import worker.common.writer.NioFileWriter;
 
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExportConsumer implements WorkHandler<ExportEvent> {
-    private final boolean isWithHeader;
     private final byte[] separator;
     private final TableFieldMetaInfo tableFieldMetaInfo;
     private final IFileWriter fileWriter;
@@ -40,14 +39,24 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
                           boolean isWithHeader, byte[] separator,
                           TableFieldMetaInfo tableFieldMetaInfo,
                           CompressMode compressMode, Charset charset) {
-        this.isWithHeader = isWithHeader;
         this.emittedDataCounter = emittedDataCounter;
         this.separator = separator;
         this.tableFieldMetaInfo = tableFieldMetaInfo;
+        filename = getFilename(filename, compressMode);
         this.fileWriter = new NioFileWriter(filename, compressMode, charset);
         if (isWithHeader) {
             appendHeader();
         }
+    }
+
+    /**
+     * 暂不支持 FileFormat
+     */
+    private String getFilename(String filename, CompressMode compressMode) {
+        if (compressMode == CompressMode.GZIP) {
+            return filename + ".gz";
+        }
+        return filename;
     }
 
     private void appendHeader() {
