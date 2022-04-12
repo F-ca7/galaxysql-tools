@@ -132,6 +132,7 @@ public class DirectExportWorker extends BaseExportWorker {
     private IFileWriter initFileWriter(Charset charset) {
         switch (fileFormat) {
         case XLSX:
+        case ET:
             return new XlsxFileWriter();
         default:
             return new NioFileWriter(compressMode, charset);

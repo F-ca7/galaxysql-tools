@@ -20,7 +20,9 @@ public enum FileFormat {
     NONE("", true),
     TXT(".txt", true),
     CSV(".csv", true),
-    XLSX(".xlsx", false);
+    LOG(".log", true),
+    XLSX(".xlsx", false),
+    ET(".et", false);
 
     private final String suffix;
 
@@ -43,8 +45,12 @@ public enum FileFormat {
             return TXT;
         case "CSV":
             return CSV;
+        case "LOG":
+            return LOG;
         case "XLSX":
             return XLSX;
+        case "ET":
+            return ET;
         default:
             throw new IllegalArgumentException("Unrecognized file format: " + compressMode);
         }

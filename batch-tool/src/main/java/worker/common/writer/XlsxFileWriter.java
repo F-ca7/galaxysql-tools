@@ -29,6 +29,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * Excel的xlsx表格
+ * 或 WPS的et表格
+ */
 public class XlsxFileWriter implements IFileWriter {
 
     private SXSSFWorkbook wb;

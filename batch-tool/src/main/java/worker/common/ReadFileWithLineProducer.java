@@ -54,6 +54,7 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
         for (int i = 0; i < fileList.size(); i++) {
             switch (fileFormat) {
             case XLSX:
+            case ET:
                 readFileWorker = new XlsxReader(context, fileList, i, ringBuffer);
                 break;
             default:
