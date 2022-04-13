@@ -16,17 +16,43 @@
 
 package util;
 
+import org.apache.commons.io.FileUtils;
+
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static model.config.ConfigConstant.DEFAULT_COMPRESS_BUFFER_SIZE;
 
 public class IOUtil {
+
+    public static FileChannel createEmptyFileAndOpenChannel(String tmpFileName) {
+        File file = new File(tmpFileName);
+        FileUtils.deleteQuietly(file);
+        try {
+            file.createNewFile();
+            return FileChannel.open(Paths.get(tmpFileName), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void writeNio(FileChannel fileChannel, byte[] data) throws IOException {
+        ByteBuffer src = ByteBuffer.wrap(data);
+        int length = fileChannel.write(src);
+        while (length != 0) {
+            length = fileChannel.write(src);
+        }
+    }
 
     public static void close(FileChannel channel) {
         if (channel != null) {

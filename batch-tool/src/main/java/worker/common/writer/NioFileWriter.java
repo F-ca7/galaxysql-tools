@@ -17,7 +17,6 @@
 package worker.common.writer;
 
 import model.config.CompressMode;
-import util.FileUtil;
 import util.IOUtil;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -73,6 +72,11 @@ public class NioFileWriter implements IFileWriter {
     }
 
     @Override
+    public boolean produceByBlock() {
+        return true;
+    }
+
+    @Override
     public void close() {
         if (closed) {
             return;
@@ -82,14 +86,9 @@ public class NioFileWriter implements IFileWriter {
     }
 
     private void openFileChannel(String fileName) {
-        try {
-            this.appendChannel = FileUtil.createEmptyFileAndOpenChannel(fileName);
-            if (compressMode == CompressMode.GZIP) {
-                this.gzipOutputStream = IOUtil.createGzipOutputStream(appendChannel);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+        this.appendChannel = IOUtil.createEmptyFileAndOpenChannel(fileName);
+        if (compressMode == CompressMode.GZIP) {
+            this.gzipOutputStream = IOUtil.createGzipOutputStream(appendChannel);
         }
     }
 

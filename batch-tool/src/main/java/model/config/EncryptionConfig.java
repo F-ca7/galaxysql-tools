@@ -27,7 +27,7 @@ public class EncryptionConfig {
     private final String key;
     private final byte[] initVector;    // for future use
 
-    EncryptionConfig(EncryptionMode encryptionMode, String key) {
+    public EncryptionConfig(EncryptionMode encryptionMode, String key) {
         this.encryptionMode = encryptionMode;
         this.key = key;
         this.initVector = null;

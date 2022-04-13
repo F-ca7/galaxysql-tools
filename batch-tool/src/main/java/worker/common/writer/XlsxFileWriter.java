@@ -69,6 +69,11 @@ public class XlsxFileWriter implements IFileWriter {
     }
 
     @Override
+    public boolean produceByBlock() {
+        return false;
+    }
+
+    @Override
     public void close() {
         try {
             wb.write(outputStream);

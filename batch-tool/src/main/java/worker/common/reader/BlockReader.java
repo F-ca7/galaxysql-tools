@@ -21,7 +21,7 @@ import model.ProducerExecutionContext;
 import model.config.CompressMode;
 import model.config.ConfigConstant;
 import model.config.FileBlockListRecord;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import worker.common.BatchLineEvent;
@@ -48,7 +48,7 @@ public class BlockReader extends FileBufferedBatchReader {
      * 4KB
      */
     private static long READ_PADDING = 1024L * 4;
-    private final Cipher cipher;
+    private final BaseCipher cipher;
     private final FileBlockListRecord fileBlockListRecord;
 
     public BlockReader(ProducerExecutionContext context,
@@ -64,7 +64,7 @@ public class BlockReader extends FileBufferedBatchReader {
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e.getMessage());
         }
-        this.cipher = Cipher.getCipher(context.getEncryptionConfig(), false);
+        this.cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
     }
 
     public String rtrim(String s) {

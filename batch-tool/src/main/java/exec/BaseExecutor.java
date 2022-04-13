@@ -154,32 +154,36 @@ public abstract class BaseExecutor {
         producerExecutionContext.setEmittedDataCounter(emittedDataCounter);
         producerExecutionContext.setCountDownLatch(countDownLatch);
         producerExecutionContext.setEventCounter(eventCounter);
-        int consumerNum = 0;
-        if (!consumerExecutionContext.isForceParallelism()) {
-            consumerNum = Math.max(consumerExecutionContext.getParallelism(),
-                ConfigConstant.CPU_NUM);
-        } else {
-            consumerNum = consumerExecutionContext.getParallelism();
-        }
 
-        consumerExecutionContext.setBatchTpsLimitPerConsumer((double) consumerExecutionContext.getTpsLimit()
-            / (consumerNum * GlobalVar.EMIT_BATCH_SIZE));
-
+        int consumerNum = getConsumerNum(consumerExecutionContext);
         consumerExecutionContext.setParallelism(consumerNum);
         consumerExecutionContext.setDataSource(dataSource);
         consumerExecutionContext.setEmittedDataCounter(emittedDataCounter);
         consumerExecutionContext.setEventCounter(eventCounter);
+        consumerExecutionContext.setUseBlock(usingBlockReader);
 
-        consumerExecutionContext.setUsingBlock(usingBlockReader);
+        consumerExecutionContext.setBatchTpsLimitPerConsumer((double) consumerExecutionContext.getTpsLimit()
+            / (consumerNum * GlobalVar.EMIT_BATCH_SIZE));
 
-        // 检查上下文是否一致，确认能否使用上一次的断点继续
-        producerExecutionContext.checkAndSetContextString(producerExecutionContext.toString() +
-            consumerExecutionContext.toString());
 
         ThreadPoolExecutor consumerThreadPool = MyThreadPool.createExecutorWithEnsure(clazz.getName() + "-consumer",
             consumerNum);
         EventFactory<BatchLineEvent> factory = BatchLineEvent::new;
         RingBuffer<BatchLineEvent> ringBuffer = MyWorkerPool.createRingBuffer(factory);
+
+        ReadFileProducer producer;
+        if (usingBlockReader) {
+            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
+        } else {
+            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
+        }
+
+        consumerExecutionContext.setUseMagicSeparator(producer.useMagicSeparator());
+
+        // 检查上下文是否一致，确认能否使用上一次的断点继续
+        producerExecutionContext.checkAndSetContextString(producerExecutionContext.toString() +
+            consumerExecutionContext.toString());
+
         BaseWorkHandler[] consumers = new BaseWorkHandler[consumerNum];
         try {
             for (int i = 0; i < consumerNum; i++) {
@@ -193,19 +197,14 @@ public abstract class BaseExecutor {
             logger.error(e.getMessage());
             throw new RuntimeException(e);
         }
+
+
         logger.info("producer config {}", producerExecutionContext);
         logger.info("consumer config {}", consumerExecutionContext);
 
+        // 开启线程工作
         WorkerPool<BatchLineEvent> workerPool = MyWorkerPool.createWorkerPool(ringBuffer, consumers);
         workerPool.start(consumerThreadPool);
-
-        ReadFileProducer producer;
-        if (usingBlockReader) {
-            producer = new ReadFileWithBlockProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
-        } else {
-            producer = new ReadFileWithLineProducer(producerExecutionContext, ringBuffer, fileLineRecordList);
-        }
-
         try {
             producer.produce();
         } catch (Exception e) {
@@ -223,6 +222,15 @@ public abstract class BaseExecutor {
         workerPool.halt();
         consumerThreadPool.shutdown();
         producerThreadPool.shutdown();
+    }
+
+    private int getConsumerNum(ConsumerExecutionContext consumerExecutionContext) {
+        if (!consumerExecutionContext.isForceParallelism()) {
+            return Math.max(consumerExecutionContext.getParallelism(),
+                ConfigConstant.CPU_NUM);
+        } else {
+            return consumerExecutionContext.getParallelism();
+        }
     }
 
     /**

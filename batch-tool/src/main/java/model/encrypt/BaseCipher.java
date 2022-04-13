@@ -17,14 +17,14 @@
 package model.encrypt;
 
 import model.config.EncryptionConfig;
-import model.config.EncryptionMode;
 
-public abstract class Cipher {
+public abstract class BaseCipher {
+    protected static final int KEY_LENGTH = 16;   // 128 bits
 
     protected final EncryptionConfig encryptionConfig;
     protected final boolean encrypting;
 
-    Cipher(EncryptionConfig encryptionConfig, boolean encrypting) {
+    BaseCipher(EncryptionConfig encryptionConfig, boolean encrypting) {
         this.encryptionConfig = encryptionConfig;
         this.encrypting = encrypting;
     }
@@ -49,7 +49,7 @@ public abstract class Cipher {
 
     public abstract void reset();
 
-    public static Cipher getCipher(EncryptionConfig config, boolean encrypting) {
+    public static BaseCipher getCipher(EncryptionConfig config, boolean encrypting) {
         switch (config.getEncryptionMode()) {
         case NONE:
             return null;
@@ -57,13 +57,11 @@ public abstract class Cipher {
             return new CaesarCipher(config, encrypting);
         case AES_CBC:
             return new AesCipher(config, encrypting);
+        case SM4_ECB:
+            return new Sm4Cipher(config, encrypting);
         default:
             throw new UnsupportedOperationException("Unsupported cipher: " + config.getEncryptionMode());
         }
-    }
-
-    public EncryptionConfig getEncryptionConfig() {
-        return encryptionConfig;
     }
 
     /**

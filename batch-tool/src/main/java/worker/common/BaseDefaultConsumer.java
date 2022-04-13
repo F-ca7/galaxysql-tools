@@ -65,7 +65,7 @@ public abstract class BaseDefaultConsumer extends BaseWorkHandler {
             throw new RuntimeException(e);
         } finally {
             consumerContext.getEmittedDataCounter().getAndDecrement();
-            if (consumerContext.isUsingBlock()) {
+            if (consumerContext.isUseBlock()) {
                 consumerContext.getEventCounter().get(event.getLocalProcessingFileIndex()).
                     get(event.getLocalProcessingBlockIndex()).getAndDecrement();
             }

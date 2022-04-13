@@ -16,12 +16,16 @@
 
 package worker.common;
 
+import com.google.common.base.Preconditions;
 import com.lmax.disruptor.RingBuffer;
 import model.ProducerExecutionContext;
+import model.config.EncryptionConfig;
 import model.config.FileFormat;
 import model.config.FileLineRecord;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import worker.common.reader.CipherLineReader;
 import worker.common.reader.CsvReader;
 import worker.common.reader.FileBufferedBatchReader;
 import worker.common.reader.XlsxReader;
@@ -38,10 +42,22 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
 
     private static final Logger logger = LoggerFactory.getLogger(ReadFileWithLineProducer.class);
 
+    private boolean useMagicSeparator = false;
+    private final FileBufferedBatchReader[] fileReaders;
+
     public ReadFileWithLineProducer(ProducerExecutionContext context,
                                     RingBuffer<BatchLineEvent> ringBuffer,
                                     List<FileLineRecord> fileLineRecordList) {
         super(context, ringBuffer, fileLineRecordList);
+        Preconditions.checkArgument(!fileLineRecordList.isEmpty(), "File record is empty");
+        this.fileReaders = new FileBufferedBatchReader[fileLineRecordList.size()];
+        initFileReaders();
+    }
+
+    private void initFileReaders() {
+        for (int i = 0; i < fileReaders.length; i++) {
+            fileReaders[i] = initFileReader(i);
+        }
     }
 
     @Override
@@ -49,19 +65,42 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
         // 并行度大小为文件数量
         // todo 暂时与文件数量相同 如果文件数量太多将控制并发度
         ThreadPoolExecutor threadPool = context.getProducerExecutor();
-        FileFormat fileFormat = context.getFileFormat();
-        FileBufferedBatchReader readFileWorker = null;
-        for (int i = 0; i < fileList.size(); i++) {
-            switch (fileFormat) {
-            case XLSX:
-            case ET:
-                readFileWorker = new XlsxReader(context, fileList, i, ringBuffer);
-                break;
-            default:
-                readFileWorker = new CsvReader(context, fileList, i, ringBuffer);
-            }
-            threadPool.submit(readFileWorker);
+
+        for (FileBufferedBatchReader reader : fileReaders) {
+            threadPool.submit(reader);
         }
     }
 
+    private FileBufferedBatchReader initFileReader(int workerIndex) {
+        FileFormat fileFormat = context.getFileFormat();
+        switch (fileFormat) {
+        case XLSX:
+        case ET:
+            this.useMagicSeparator = true;
+            return new XlsxReader(context, fileList, workerIndex, ringBuffer);
+        case CSV:
+        case LOG:
+        case TXT:
+            this.useMagicSeparator = true;
+            return new CsvReader(context, fileList, workerIndex, ringBuffer);
+        case NONE:
+            // do nothing
+            break;
+        default:
+            throw new UnsupportedOperationException("Unknown file format type: " + fileFormat);
+        }
+        if (!context.getEncryptionConfig().getEncryptionMode().isSupportStreamingBit()) {
+            BaseCipher cipher = BaseCipher.getCipher(context.getEncryptionConfig(), false);
+            return new CipherLineReader(context, fileList, workerIndex, cipher, ringBuffer);
+        }
+        if (context.getEncryptionConfig().equals(EncryptionConfig.NONE)) {
+            return new CsvReader(context, fileList, workerIndex, ringBuffer);
+        }
+        throw new IllegalArgumentException("Should use BlockReader in streaming bit encryption");
+    }
+
+    @Override
+    public boolean useMagicSeparator() {
+        return this.useMagicSeparator;
+    }
 }

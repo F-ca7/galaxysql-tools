@@ -569,6 +569,9 @@ public class CommandUtil {
         }
     }
 
+    /**
+     * TODO 文件格式、压缩格式、加密模式三者的设置冲突解决
+     */
     private static FileFormat getFileFormat(CommandLine result) {
         if (result.hasOption(ARG_SHORT_FILE_FORMAT)) {
             String fileFormat = result.getOptionValue(ARG_SHORT_FILE_FORMAT);

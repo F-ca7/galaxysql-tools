@@ -22,11 +22,12 @@ import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.DataSourceUtil;
 import util.FileUtil;
+import worker.common.writer.CipherLineFileWriter;
 import worker.common.writer.IFileWriter;
 import worker.common.writer.NioFileWriter;
 import worker.common.writer.XlsxFileWriter;
@@ -56,7 +57,7 @@ public class DirectExportWorker extends BaseExportWorker {
      */
     private final String filename;
     private final IFileWriter fileWriter;
-    private Cipher cipher = null;
+    private final BaseCipher cipher;
 
     /**
      * 单个文件最大行数
@@ -90,9 +91,11 @@ public class DirectExportWorker extends BaseExportWorker {
                               QuoteEncloseMode quoteEncloseMode,
                               CompressMode compressMode,
                               FileFormat fileFormat,
-                              Charset charset) {
+                              Charset charset,
+                              BaseCipher cipher) {
         this(druid, topology,  tableFieldMetaInfo, 0,
-            filename, separator, isWithHeader, quoteEncloseMode, compressMode, fileFormat, charset);
+            filename, separator, isWithHeader, quoteEncloseMode,
+            compressMode, fileFormat, charset, cipher);
     }
 
     /**
@@ -107,11 +110,13 @@ public class DirectExportWorker extends BaseExportWorker {
                               QuoteEncloseMode quoteEncloseMode,
                               CompressMode compressMode,
                               FileFormat fileFormat,
-                              Charset charset) {
+                              Charset charset,
+                              BaseCipher cipher) {
         super(druid, topology, tableFieldMetaInfo, separator, quoteEncloseMode, compressMode, fileFormat);
         this.maxLine = maxLine;
         this.filename = filename;
         this.isWithHeader = isWithHeader;
+        this.cipher = cipher;
         initFileSeq();
         this.fileWriter = initFileWriter(charset);
         createNewFile();
@@ -134,9 +139,11 @@ public class DirectExportWorker extends BaseExportWorker {
         case XLSX:
         case ET:
             return new XlsxFileWriter();
-        default:
+        }
+        if (cipher == null || cipher.supportBlock()) {
             return new NioFileWriter(compressMode, charset);
         }
+        return new CipherLineFileWriter(cipher, separator, quoteEncloseMode);
     }
 
     /**
@@ -183,7 +190,7 @@ public class DirectExportWorker extends BaseExportWorker {
     public void run() {
         beforeRun();
         try {
-            if (produceByBlock()) {
+            if (this.fileWriter.produceByBlock()) {
                 produceData();
             } else {
                 produceDataByLine();
@@ -193,16 +200,6 @@ public class DirectExportWorker extends BaseExportWorker {
         } finally {
             afterRun();
         }
-    }
-
-    private boolean produceByBlock() {
-        if (!fileFormat.isSupportBlock()) {
-            return false;
-        }
-        if (this.cipher == null) {
-            return true;
-        }
-        return cipher.supportBlock();
     }
 
     private void beforeRun() {
@@ -305,11 +302,11 @@ public class DirectExportWorker extends BaseExportWorker {
                 String[] values = new String[colNum];
                 for (int i = 1; i < colNum + 1; i++) {
                     String value = rs.getString(i);
-                    values[i -1] = value != null ? value : FileUtil.NULL_ESC_STR;
+                    values[i - 1] = value != null ? value : FileUtil.NULL_ESC_STR;
                 }
                 fileWriter.writeLine(values);
                 if (line % 1000 == 0) {
-                    logger.info("Current written lines: " + line);
+                    logger.info("{} current written lines: {} ", filename, line);
                 }
             }
         } catch (SQLException e) {
@@ -345,9 +342,5 @@ public class DirectExportWorker extends BaseExportWorker {
 
     public void setPermitted(Semaphore permitted) {
         this.permitted = permitted;
-    }
-
-    public void setCipher(Cipher cipher) {
-        this.cipher = cipher;
     }
 }

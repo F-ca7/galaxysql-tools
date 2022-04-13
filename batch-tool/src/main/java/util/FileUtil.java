@@ -120,13 +120,6 @@ public class FileUtil {
         os.write(DOUBLE_QUOTE_BYTE);
     }
 
-    public static FileChannel createEmptyFileAndOpenChannel(String tmpFileName) throws IOException {
-        File file = new File(tmpFileName);
-        FileUtils.deleteQuietly(file);
-        file.createNewFile();
-        return FileChannel.open(Paths.get(tmpFileName), StandardOpenOption.APPEND);
-    }
-
     public static byte[] getHeaderBytes(List<FieldMetaInfo> metaInfoList, byte[] separator) {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         int len = metaInfoList.size();
@@ -151,13 +144,6 @@ public class FileUtil {
         return NULL_STR_WITH_COMMA_BYTE_BUFFER;
     }
 
-    public static void writeNio(FileChannel fileChannel, byte[] data) throws IOException {
-        ByteBuffer src = ByteBuffer.wrap(data);
-        int length = fileChannel.write(src);
-        while (length != 0) {
-            length = fileChannel.write(src);
-        }
-    }
 
     public static String[] split(String line, String sep, boolean withLastSep, boolean hasEscapedQuote) {
         ArrayList<String> values = splitWithQuoteEscape(line, sep, withLastSep, 10, hasEscapedQuote);

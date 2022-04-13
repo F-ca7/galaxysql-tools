@@ -22,8 +22,7 @@ import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 import org.bouncycastle.crypto.params.KeyParameter;
 
-public class AesCipher extends Cipher {
-    private static final int KEY_LENGTH = 16;   // 128 bits
+public class AesCipher extends BaseCipher {
 
     private final BufferedBlockCipher cipher;
 

@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public abstract class ReadFileProducer {
 
@@ -66,4 +65,7 @@ public abstract class ReadFileProducer {
         }
     }
 
+    public boolean useMagicSeparator() {
+        return false;
+    }
 }

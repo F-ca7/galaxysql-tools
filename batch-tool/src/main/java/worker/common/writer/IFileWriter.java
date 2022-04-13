@@ -25,8 +25,10 @@ public interface IFileWriter {
     }
 
     default void writeLine(String[] values) {
-        throw new UnsupportedOperationException(getClass() + " does not support write line");
+        throw new UnsupportedOperationException(getClass() + " does not support write line with values");
     }
+
+    boolean produceByBlock();
 
     void close();
 }

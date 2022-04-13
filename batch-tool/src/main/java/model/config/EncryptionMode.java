@@ -20,7 +20,8 @@ public enum EncryptionMode {
 
     NONE(true),
     CAESAR(true),     // naive Caesar encryption
-    AES_CBC(false);    // AES/CBC/PKCS5Padding
+    AES_CBC(false),    // AES/CBC/PKCS5Padding
+    SM4_ECB(false);    // SM4/EBC/PKCS5Padding
 
     private final boolean supportStreamingBit;
 
@@ -38,6 +39,9 @@ public enum EncryptionMode {
         case "AES":
         case "AES-CBC":
             return AES_CBC;
+        case "SM4":
+        case "SM4-ECB":
+            return SM4_ECB;
         default:
             throw new IllegalArgumentException("Unrecognized encryption mode: " + encryptionMode);
         }

@@ -18,7 +18,7 @@ package model.encrypt;
 
 import model.config.EncryptionConfig;
 
-public class CaesarCipher extends Cipher {
+public class CaesarCipher extends BaseCipher {
 
     private byte mask;
 

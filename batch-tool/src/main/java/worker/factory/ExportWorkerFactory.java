@@ -21,7 +21,7 @@ import exception.DatabaseException;
 import model.config.ExportConfig;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
-import model.encrypt.Cipher;
+import model.encrypt.BaseCipher;
 import util.DbUtil;
 import util.FileUtil;
 import worker.export.DirectExportWorker;
@@ -39,6 +39,7 @@ public class ExportWorkerFactory {
                                                                     ExportConfig config) {
 
         DirectExportWorker directExportWorker;
+        BaseCipher cipher = BaseCipher.getCipher(config.getEncryptionConfig(), true);
         switch (config.getExportWay()) {
         case MAX_LINE_NUM_IN_SINGLE_FILE:
             directExportWorker = new DirectExportWorker(druid,
@@ -46,21 +47,22 @@ public class ExportWorkerFactory {
                 config.getLimitNum(),
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(),
+                config.getFileFormat(), config.getCharset(), cipher);
             break;
         case DEFAULT:
             directExportWorker = new DirectExportWorker(druid,
                 topology, tableFieldMetaInfo,
                 filename,
                 config.getSeparator(), config.isWithHeader(),
-                config.getQuoteEncloseMode(), config.getCompressMode(), config.getFileFormat(), config.getCharset());
+                config.getQuoteEncloseMode(), config.getCompressMode(),
+                config.getFileFormat(), config.getCharset(), cipher);
             break;
         case FIXED_FILE_NUM:
         default:
             throw new UnsupportedOperationException("Do not support direct export when fixed file num");
         }
         directExportWorker.setWhereCondition(config.getWhereCondition());
-        directExportWorker.setCipher(Cipher.getCipher(config.getEncryptionConfig(), true));
         return directExportWorker;
     }
 

@@ -25,6 +25,7 @@ import model.ProducerExecutionContext;
 import model.config.ConfigConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.IOUtil;
 import worker.common.BatchLineEvent;
 
 import java.io.File;
@@ -67,11 +68,12 @@ public class CsvReader extends FileBufferedBatchReader {
                 String line = String.join(ConfigConstant.MAGIC_CSV_SEP, fields);
                 appendToLineBuffer(line);
             }
-            reader.close();
             emitLineBuffer();
             logger.info("{} 读取完毕", fileList.get(localProcessingFileIndex).getPath());
         } catch (IOException e) {
             logger.error(e.getMessage());
+        } finally {
+            IOUtil.close(reader);
         }
     }
 

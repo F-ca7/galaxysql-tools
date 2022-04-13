@@ -20,7 +20,6 @@ import model.config.EncryptionMode;
 import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.CBCBlockCipher;
-import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 
 public class CipherUtil {
 
