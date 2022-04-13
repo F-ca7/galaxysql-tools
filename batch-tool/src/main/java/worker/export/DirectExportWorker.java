@@ -20,6 +20,7 @@ import model.config.CompressMode;
 import model.config.FileFormat;
 import model.config.GlobalVar;
 import model.config.QuoteEncloseMode;
+import model.db.FieldMetaInfo;
 import model.db.TableFieldMetaInfo;
 import model.db.TableTopology;
 import model.encrypt.BaseCipher;
@@ -43,6 +44,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 /**
  * 直接拿到数据库数据并写入文件的工作线程
@@ -137,6 +139,7 @@ public class DirectExportWorker extends BaseExportWorker {
     private IFileWriter initFileWriter(Charset charset) {
         switch (fileFormat) {
         case XLSX:
+        case XLS:
         case ET:
             return new XlsxFileWriter();
         }
@@ -182,8 +185,14 @@ public class DirectExportWorker extends BaseExportWorker {
     }
 
     private void appendHeader() {
-        byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
-        fileWriter.write(header);
+        if (this.fileWriter.produceByBlock()) {
+            byte[] header = FileUtil.getHeaderBytes(tableFieldMetaInfo.getFieldMetaInfoList(), separator);
+            fileWriter.write(header);
+        } else {
+            String[] headerValues = tableFieldMetaInfo.getFieldMetaInfoList().stream()
+                    .map(FieldMetaInfo::getName).toArray(String[]::new);
+            fileWriter.writeLine(headerValues);
+        }
     }
 
     @Override

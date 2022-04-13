@@ -27,6 +27,9 @@ import worker.common.writer.NioFileWriter;
 import java.nio.charset.Charset;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 暂不支持 FileFormat
+ */
 public class ExportConsumer implements WorkHandler<ExportEvent> {
     private final byte[] separator;
     private final TableFieldMetaInfo tableFieldMetaInfo;
@@ -49,9 +52,6 @@ public class ExportConsumer implements WorkHandler<ExportEvent> {
         }
     }
 
-    /**
-     * 暂不支持 FileFormat
-     */
     private String getFilename(String filename, CompressMode compressMode) {
         if (compressMode == CompressMode.GZIP) {
             return filename + ".gz";

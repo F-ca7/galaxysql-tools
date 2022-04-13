@@ -75,6 +75,7 @@ public class ReadFileWithLineProducer extends ReadFileProducer {
         FileFormat fileFormat = context.getFileFormat();
         switch (fileFormat) {
         case XLSX:
+        case XLS:
         case ET:
             this.useMagicSeparator = true;
             return new XlsxReader(context, fileList, workerIndex, ringBuffer);
